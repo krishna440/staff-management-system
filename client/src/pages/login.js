@@ -26,8 +26,8 @@ const Login = () => {
       sessionStorage.setItem("user", JSON.stringify(res.data));
       navigate("/");
     } catch (err) {
-      setError("Invalid email or password. Please try again.");
-    } finally {
+  setError(err.response?.data?.message || "Login failed");
+} finally {
       setLoading(false);
     }
   };
