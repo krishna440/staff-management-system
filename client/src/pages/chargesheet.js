@@ -1,0 +1,1622 @@
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import {
+  loadTaskRates,
+  TASK_RATES_CHANGED_EVENT,
+  teachingRateDefaults,
+} from "../utils/taskRates";
+
+const EXAM_OPTIONS = [
+  {
+    key: "FY_SEM_I_ESE",
+    label: "FY Sem I - ESE",
+    academicYear: "FY",
+    semester: "Sem I",
+    examType: "ESE",
+    month: "January 2026",
+    period: "05/01/2026 to 19/01/2026",
+    color: "#6366f1",
+  },
+  {
+    key: "FY_SEM_I_RE_ESE",
+    label: "FY Sem I - Re-ESE",
+    academicYear: "FY",
+    semester: "Sem I",
+    examType: "Re-ESE",
+    month: "February 2026",
+    period: "09/02/2026 to 13/02/2026",
+    color: "#f59e0b",
+  },
+  {
+    key: "SY_SEM_III_ESE",
+    label: "SY Sem III - ESE",
+    academicYear: "SY",
+    semester: "Sem III",
+    examType: "ESE",
+    month: "December 2026",
+    period: "December 2026",
+    color: "#10b981",
+  },
+  {
+    key: "SY_SEM_III_RE_ESE",
+    label: "SY Sem III - Re-ESE",
+    academicYear: "SY",
+    semester: "Sem III",
+    examType: "Re-ESE",
+    month: "January 2026",
+    period: "21/01/2026 to 27/01/2026",
+    color: "#f43f5e",
+  },
+  {
+    key: "FY_SEM_II_ESE",
+    label: "FY Sem II - ESE",
+    academicYear: "FY",
+    semester: "Sem II",
+    examType: "ESE",
+    month: "May 2026",
+    period: "May 2026",
+    color: "#0ea5e9",
+  },
+  {
+    key: "FY_SEM_II_RE_ESE",
+    label: "FY Sem II - Re-ESE",
+    academicYear: "FY",
+    semester: "Sem II",
+    examType: "Re-ESE",
+    month: "June 2026",
+    period: "June 2026",
+    color: "#8b5cf6",
+  },
+];
+
+const COURSE_CATALOG = {
+  "Sem I": [
+    { code: "R5MC5011S", title: "Management Information System" },
+    { code: "R5MC5012T", title: "Software Engineering & Project Management" },
+    { code: "R5MC5013T", title: "Operating System" },
+    { code: "R5MC5013P", title: "Operating System Lab", kind: "lab" },
+    { code: "R5MC5014S", title: "Mathematical and Statistical Foundations 1" },
+    { code: "R5MC5015S", title: "Accounting and Finance(MOOC)" },
+    { code: "R5MC5016L", title: "Business English" },
+    { code: "R5MC5017L", title: "Mobile Computing Lab", kind: "lab" },
+    { code: "R5MC5018L", title: "Web Technology Lab (Node Js, Angular Js, React, Flutter)", kind: "lab" },
+    { code: "R5MC5019D", title: "Mini Project I (Based on SSAD, OOAD and User Experience Design Principles)", kind: "lab" },
+  ],
+  "Sem II": [
+    { code: "R5MC5021T", title: "Data Mining" },
+    { code: "R5MC5022T", title: "Design and Analysis of Algorithm" },
+    { code: "R5MC5023S", title: "Mathematical and Statistical Foundation II" },
+    { code: "R5MC5027T", title: "Professional Communication" },
+    { code: "R5MC5111S", title: "Computer Graphics & Animation" },
+    { code: "R5MC5112S", title: "Digital Forensics" },
+    { code: "R5MC5113S", title: "Cloud Computing" },
+    { code: "R5MC5114S", title: "Data Warehousing" },
+    { code: "R5MC5115S", title: "Entrepreneurship Management and IPR" },
+    { code: "R5MC5121T", title: "Multimedia System" },
+    { code: "R5MC5122T", title: "Image Processing" },
+    { code: "R5MC5123T", title: "Software Design and Pattern" },
+    { code: "R5MC5124T", title: "Ethical Hacking" },
+    { code: "R5MC5125T", title: "Internet of Things" },
+    { code: "R5MC5121P", title: "Multimedia System Lab", kind: "lab" },
+    { code: "R5MC5122P", title: "Image Processing Lab", kind: "lab" },
+    { code: "R5MC5123P", title: "Software Design and Pattern Lab", kind: "lab" },
+    { code: "R5MC5124P", title: "Ethical Hacking Lab", kind: "lab" },
+    { code: "R5MC5125P", title: "Internet of Things Lab", kind: "lab" },
+    { code: "R5MC5021P", title: "Data Mining Lab", kind: "lab" },
+    { code: "R5MC5022P", title: "Design and Analysis of Algorithm Lab", kind: "lab" },
+    { code: "R5MC5025L", title: "Java and Python Lab", kind: "lab" },
+    { code: "R5MC5026D", title: "Mini Project 2 (Based on RDBMS and User Experience Design Principles)", kind: "lab" },
+  ],
+  "Sem III": [
+    { code: "R5MC6011T", title: "Big Data Analytics and Visualization" },
+    { code: "R5MC6011P", title: "Big Data Analytics and Visualization Lab", kind: "lab" },
+    { code: "R5MC6012T", title: "Artificial Intelligence and Machine learning" },
+    { code: "R5MC6012P", title: "Artificial Intelligence and Machine learning Lab", kind: "lab" },
+    { code: "R5MC6013S", title: "Data Science" },
+    { code: "R5MC6014T", title: "Information and network security" },
+    { code: "R5MC6014P", title: "Information and network security Lab", kind: "lab" },
+    { code: "R5MC6111T", title: "Geographic Information Systems" },
+    { code: "R5MC6111P", title: "Geographic Information Systems Lab", kind: "lab" },
+    { code: "R5MC6112T", title: "Gaming Technology" },
+    { code: "R5MC6112P", title: "Gaming Technology Lab", kind: "lab" },
+    { code: "R5MC6113T", title: "Robotics" },
+    { code: "R5MC6113P", title: "Robotics Lab", kind: "lab" },
+    { code: "R5MC6115T", title: "Deep learning" },
+    { code: "R5MC6115P", title: "Deep learning Lab", kind: "lab" },
+  ],
+};
+
+const STATIC_FORM_FIELDS = {
+  staffId: "",
+  staffName: "",
+  designation: "",
+  courseKey: "",
+  courseCode: "",
+  courseTitle: "",
+  paperSets: 0,
+  assessments: 0,
+  examConduction: 0,
+  invigilation: 0,
+  dutyRole: "",
+  dutyDates: "",
+  dutyDays: 0,
+  dutyRate: 0,
+};
+
+function emptyChargeForm() {
+  const first = EXAM_OPTIONS[0];
+  return {
+    ...STATIC_FORM_FIELDS,
+    examKey: first.key,
+    examPeriod: first.period,
+    examMonth: first.month,
+    ...teachingRateDefaults(),
+  };
+}
+
+const initialSubjectForm = {
+  semester: "Sem I",
+  code: "",
+  title: "",
+  kind: "theory",
+};
+
+function formatDdMmYyyyFromKey(dateKey) {
+  const parts = dateKey.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return "";
+  const [y, m, d] = parts;
+  return [
+    String(d).padStart(2, "0"),
+    String(m).padStart(2, "0"),
+    y,
+  ].join(".");
+}
+
+/** Monday-first weekday index (0 = Monday, 6 = Sunday). */
+function mondayWeekdayIndex(dayOfWeekSundayZero) {
+  return (dayOfWeekSundayZero + 6) % 7;
+}
+
+function DutyExamCalendar({ value, onChange, accent }) {
+  const selected = useMemo(() => new Set(value), [value]);
+
+  const [cursor, setCursor] = useState(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() };
+  });
+
+  const monthMeta = useMemo(() => {
+    const first = new Date(cursor.year, cursor.month, 1);
+    const last = new Date(cursor.year, cursor.month + 1, 0);
+    const daysInMonth = last.getDate();
+    const pad = mondayWeekdayIndex(first.getDay());
+    return { daysInMonth, pad, monthLabel: first.toLocaleString("en-IN", { month: "long", year: "numeric" }) };
+  }, [cursor.year, cursor.month]);
+
+  const padCells = [];
+  const dayCells = [];
+  for (let i = 0; i < monthMeta.pad; i += 1) padCells.push(null);
+  for (let day = 1; day <= monthMeta.daysInMonth; day += 1) dayCells.push(day);
+
+  const toggle = (day) => {
+    const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const next = new Set(value);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onChange(Array.from(next).sort());
+  };
+
+  const shiftMonth = (delta) => {
+    const d = new Date(cursor.year, cursor.month + delta, 1);
+    setCursor({ year: d.getFullYear(), month: d.getMonth() });
+  };
+
+  const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  return (
+    <div className="cs-duty-cal">
+      <div className="cs-duty-cal-head">
+        <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(-1)} aria-label="Previous month">
+          ‹
+        </button>
+        <span className="cs-duty-cal-title">{monthMeta.monthLabel}</span>
+        <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(1)} aria-label="Next month">
+          ›
+        </button>
+      </div>
+      <div className="cs-duty-cal-weekdays">
+        {WEEK_DAYS.map((w) => (
+          <span key={w}>{w}</span>
+        ))}
+      </div>
+      <div className="cs-duty-cal-grid">
+        {padCells.map((_, idx) => (
+          <span key={`p-${idx}`} className="cs-duty-cal-cell cs-duty-cal-muted" />
+        ))}
+        {dayCells.map((day) => {
+          const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const active = selected.has(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`cs-duty-cal-cell cs-duty-cal-day${active ? " is-selected" : ""}`}
+              style={active ? { background: accent, borderColor: accent, color: "#fff" } : undefined}
+              onClick={() => toggle(day)}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+      <p className="cs-duty-cal-hint">Click dates to select or remove. Total days updates automatically.</p>
+    </div>
+  );
+}
+
+const Chargesheet = () => {
+  const [staff, setStaff] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState(() => emptyChargeForm());
+  const [taskRateConfig, setTaskRateConfig] = useState(() => loadTaskRates());
+  const [customCourses, setCustomCourses] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("customCourses") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  const [subjectForm, setSubjectForm] = useState(initialSubjectForm);
+  const navigate = useNavigate();
+  const [dutyDateKeys, setDutyDateKeys] = useState([]);
+
+  const dutySortedKeys = useMemo(() => [...dutyDateKeys].sort(), [dutyDateKeys]);
+  const dutyDatesJoined = useMemo(
+    () => dutySortedKeys.map(formatDdMmYyyyFromKey).filter(Boolean).join(", "),
+    [dutySortedKeys]
+  );
+  const dutyDaysFromCalendar = dutySortedKeys.length;
+
+  const dutyRoleOptions = taskRateConfig.duties;
+
+  const selectedDutyRole = useMemo(
+    () => dutyRoleOptions.find((o) => o.label === form.dutyRole),
+    [dutyRoleOptions, form.dutyRole]
+  );
+
+  const selectedExam = useMemo(
+    () => EXAM_OPTIONS.find((o) => o.key === form.examKey) || EXAM_OPTIONS[0],
+    [form.examKey]
+  );
+
+  const selectedCourses = useMemo(
+    () => [
+      ...(COURSE_CATALOG[selectedExam.semester] || []),
+      ...(customCourses[selectedExam.semester] || []),
+    ],
+    [selectedExam.semester, customCourses]
+  );
+
+  const selectedCourse = useMemo(
+    () => selectedCourses.find((c) => c.code === form.courseKey || c.code === form.courseCode),
+    [selectedCourses, form.courseKey, form.courseCode]
+  );
+
+  const labCourses = useMemo(
+    () => selectedCourses.filter((course) => course.kind === "lab"),
+    [selectedCourses]
+  );
+
+  const isLabCourse = selectedCourse?.kind === "lab";
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
+
+  useEffect(() => {
+    const syncRates = () => {
+      const r = loadTaskRates();
+      setTaskRateConfig(r);
+      setForm((p) => {
+        const duty = r.duties.find((d) => d.label === p.dutyRole);
+        return {
+          ...p,
+          paperSetRate: r.paperSettingPerSet,
+          assessmentRate: r.assessmentPerPaper,
+          ...(duty ? { dutyRate: duty.rate } : {}),
+        };
+      });
+    };
+    window.addEventListener(TASK_RATES_CHANGED_EVENT, syncRates);
+    window.addEventListener("storage", syncRates);
+    return () => {
+      window.removeEventListener(TASK_RATES_CHANGED_EVENT, syncRates);
+      window.removeEventListener("storage", syncRates);
+    };
+  }, []);
+
+  const fetchStaff = async () => {
+    try {
+      setLoadingStaff(true);
+      const res = await axios.get("http://localhost:5000/api/staff");
+      setStaff(res.data);
+    } catch {
+      setError("Failed to load staff list.");
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "examKey") {
+      const nextExam = EXAM_OPTIONS.find((o) => o.key === value) || EXAM_OPTIONS[0];
+      setForm((p) => ({
+        ...p,
+        examKey: value,
+        examPeriod: nextExam.period,
+        examMonth: nextExam.month,
+        courseKey: "",
+        courseCode: "",
+        courseTitle: "",
+      }));
+    } else {
+      setForm((p) => ({ ...p, [name]: value }));
+    }
+    setError("");
+    setSaved(false);
+  };
+
+  const handleCourseSelect = (e) => {
+    const selected = selectedCourses.find((c) => c.code === e.target.value);
+    setForm((p) => ({
+      ...p,
+      courseKey: selected?.code || "",
+      courseCode: selected?.code || "",
+      courseTitle: selected?.title || "",
+      paperSets: selected?.kind === "lab" ? 0 : p.paperSets,
+    }));
+    setError("");
+    setSaved(false);
+  };
+
+  const handleStaffSelect = (e) => {
+    const selected = staff.find((s) => s._id === e.target.value);
+    if (!selected) {
+      setForm((p) => ({ ...p, staffId: "", staffName: "", designation: "" }));
+      return;
+    }
+    setForm((p) => ({
+      ...p,
+      staffId: selected._id,
+      staffName: selected.name,
+      designation: selected.type.toLowerCase(),
+    }));
+  };
+
+  const setCount = (field, delta) => {
+    setForm((p) => ({ ...p, [field]: Math.max(0, Number(p[field] || 0) + delta) }));
+    setSaved(false);
+  };
+
+  const setCountValue = (field, value) => {
+    const numericValue = value === "" ? "" : Math.max(0, Number(value || 0));
+    setForm((p) => ({ ...p, [field]: numericValue }));
+    setSaved(false);
+  };
+
+  const updateSubjectForm = (field, value) => {
+    setSubjectForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const addCustomSubject = () => {
+    const semester = subjectForm.semester;
+    const code = subjectForm.code.trim().toUpperCase();
+    const title = subjectForm.title.trim();
+    if (!semester || !code || !title) {
+      setError("Please select semester and enter subject code and name.");
+      return;
+    }
+
+    const nextCourse = {
+      code,
+      title,
+      ...(subjectForm.kind === "lab" ? { kind: "lab" } : {}),
+    };
+
+    setCustomCourses((prev) => {
+      const existing = prev[semester] || [];
+      const next = {
+        ...prev,
+        [semester]: [...existing.filter((course) => course.code !== code), nextCourse],
+      };
+      localStorage.setItem("customCourses", JSON.stringify(next));
+      return next;
+    });
+    setSubjectForm((prev) => ({ ...prev, code: "", title: "" }));
+    setError("");
+    setSaved(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.staffId) { setError("Please select a staff member before saving."); return; }
+    const teachingWorkload =
+      Number(form.paperSets || 0) > 0 || Number(form.assessments || 0) > 0;
+    if (
+      form.designation === "teaching" &&
+      teachingWorkload &&
+      (!form.courseCode.trim() || !form.courseTitle.trim())
+    ) {
+      setError("Please select a subject when entering paper setting or assessment amounts.");
+      return;
+    }
+    try {
+      setSaving(true);
+      setError("");
+      await axios.post("http://localhost:5000/api/chargesheet", {
+        ...form,
+        dutyDates: dutyDatesJoined,
+        dutyDays: dutyDaysFromCalendar,
+        paperSets: isLabCourse ? 0 : form.paperSets,
+        academicYear: selectedExam.academicYear,
+        semester: selectedExam.semester,
+        examType: selectedExam.examType,
+        examMonth: form.examMonth || selectedExam.month,
+        examPeriod: form.examPeriod || selectedExam.period,
+        examLabel: selectedExam.label,
+        month: form.examMonth || selectedExam.month,
+      });
+      setSaved(true);
+      navigate("/");
+    } catch {
+      setError("Failed to save exam sheet. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = () => {
+    setForm(emptyChargeForm());
+    setDutyDateKeys([]);
+    setSaved(false);
+    setError("");
+  };
+
+  const handleDutyRoleChange = (e) => {
+    const opt = dutyRoleOptions.find((o) => o.key === e.target.value);
+    setForm((p) => ({
+      ...p,
+      dutyRole: opt?.label || "",
+      dutyRate: opt ? opt.rate : 0,
+    }));
+    setSaved(false);
+    setError("");
+  };
+
+  const fmt = (val) => Number(val || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+
+  const paperAmt = isLabCourse ? 0 : Number(form.paperSets || 0) * Number(form.paperSetRate || 0);
+  const assessmentAmt = Number(form.assessments || 0) * Number(form.assessmentRate || 0);
+  const dutyAmount = dutyDaysFromCalendar * Number(form.dutyRate || 0);
+  const grandTotal = paperAmt + assessmentAmt + Number(form.examConduction || 0) + Number(form.invigilation || 0) + dutyAmount;
+
+  const completionPercent = useMemo(() => {
+    let steps = 0, done = 0;
+    steps++; if (form.staffId) done++;
+    steps++; if (form.examKey) done++;
+    if (form.designation === "teaching") {
+      steps++; if (form.courseCode) done++;
+    }
+    return Math.round((done / steps) * 100);
+  }, [form]);
+
+  return (
+    <div className="cs-root">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        .cs-root {
+          min-height: 100vh;
+          background: #f0f4ff;
+          font-family: 'Inter', Arial, sans-serif;
+          color: #0f172a;
+        }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ TOP BAR ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-topbar {
+          background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+          padding: 0 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          min-height: 72px;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          box-shadow: 0 4px 24px rgba(67,56,202,.35);
+        }
+        .cs-topbar-left { display: flex; align-items: center; gap: 16px; }
+        .cs-logo {
+          width: 44px; height: 44px;
+          background: rgba(255,255,255,.15);
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 22px;
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255,255,255,.2);
+        }
+        .cs-brand { color: #fff; }
+        .cs-brand-sub {
+          font-size: 11px; font-weight: 500;
+          color: rgba(255,255,255,.65);
+          letter-spacing: .5px;
+        }
+        .cs-brand-title { font-size: 18px; font-weight: 700; }
+        .cs-topbar-right { display: flex; align-items: center; gap: 10px; }
+        .cs-back-btn {
+          display: flex; align-items: center; gap: 7px;
+          background: rgba(255,255,255,.12);
+          border: 1px solid rgba(255,255,255,.2);
+          color: #fff;
+          border-radius: 10px;
+          padding: 9px 16px;
+          font-size: 13px; font-weight: 600;
+          cursor: pointer;
+          transition: all .2s;
+          backdrop-filter: blur(8px);
+        }
+        .cs-back-btn:hover { background: rgba(255,255,255,.22); transform: translateX(-2px); }
+        .cs-progress-pill {
+          background: rgba(255,255,255,.12);
+          border: 1px solid rgba(255,255,255,.2);
+          border-radius: 20px;
+          padding: 6px 14px;
+          color: #fff;
+          font-size: 12px; font-weight: 600;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .cs-progress-bar-mini {
+          width: 60px; height: 6px;
+          background: rgba(255,255,255,.2);
+          border-radius: 3px; overflow: hidden;
+        }
+        .cs-progress-bar-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #a5f3fc, #6366f1);
+          border-radius: 3px;
+          transition: width .4s ease;
+        }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ BODY ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-body {
+          padding: 28px 32px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 360px;
+          gap: 24px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARDS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-card {
+          background: #fff;
+          border: 1px solid #e2e8f4;
+          border-radius: 16px;
+          overflow: hidden;
+          margin-bottom: 20px;
+          box-shadow: 0 1px 8px rgba(0,0,0,.05), 0 4px 16px rgba(67,56,202,.04);
+          transition: box-shadow .2s;
+        }
+        .cs-card:hover { box-shadow: 0 2px 16px rgba(0,0,0,.08), 0 6px 24px rgba(67,56,202,.07); }
+        .cs-card-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex; align-items: center; gap: 10px;
+          background: linear-gradient(135deg, #fafbff 0%, #f8faff 100%);
+        }
+        .cs-card-icon {
+          width: 34px; height: 34px;
+          border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 17px;
+        }
+        .cs-card-header h3 {
+          font-size: 14px; font-weight: 700;
+          color: #1e293b; flex: 1;
+        }
+        .cs-card-badge {
+          font-size: 11px; font-weight: 600;
+          padding: 3px 10px;
+          border-radius: 20px;
+        }
+        .cs-card-body { padding: 20px; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ GRID ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .cs-grid1 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ FORM FIELDS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-field { display: flex; flex-direction: column; gap: 6px; }
+        .cs-label {
+          font-size: 11px; font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: .6px;
+          color: #64748b;
+        }
+        .cs-label span { color: #ef4444; margin-left: 2px; }
+        .cs-select, .cs-input {
+          width: 100%;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 11px 14px;
+          font-size: 14px;
+          font-family: 'Inter', sans-serif;
+          background: #fff;
+          color: #0f172a;
+          outline: none;
+          transition: border-color .2s, box-shadow .2s;
+          appearance: none;
+          -webkit-appearance: none;
+        }
+        .cs-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+        .cs-select:focus, .cs-input:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+        }
+        .cs-input[readonly] {
+          background: #f8fafc;
+          color: #64748b;
+          cursor: default;
+        }
+        .cs-select:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ INFO TILES ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-info-tile {
+          border-radius: 12px;
+          padding: 14px 16px;
+          display: flex; flex-direction: column; gap: 4px;
+          border: 1.5px solid;
+        }
+        .cs-info-tile-label {
+          font-size: 10px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: .5px;
+        }
+        .cs-info-tile-val { font-size: 15px; font-weight: 700; }
+        .cs-info-tile-sub { font-size: 12px; margin-top: 1px; }
+        .cs-inline-edit {
+          width: 100%;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 9px;
+          background: #fff;
+          color: #0f172a;
+          font-size: 14px;
+          font-weight: 700;
+          padding: 9px 10px;
+          outline: none;
+          font-family: inherit;
+        }
+        .cs-inline-edit.small {
+          font-size: 12px;
+          font-weight: 600;
+          margin-top: 8px;
+        }
+        .cs-inline-edit:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+        }
+        .cs-lab-subjects {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+        .cs-lab-subject {
+          border: 1px solid #dbeafe;
+          background: #f8fbff;
+          border-radius: 10px;
+          padding: 10px 12px;
+        }
+        .cs-lab-code {
+          display: block;
+          color: #1d4ed8;
+          font-size: 11px;
+          font-weight: 800;
+          margin-bottom: 4px;
+        }
+        .cs-lab-title {
+          color: #1e293b;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1.35;
+        }
+        .cs-lab-note {
+          border: 1px solid #bbf7d0;
+          background: #f0fdf4;
+          color: #166534;
+          border-radius: 10px;
+          padding: 10px 12px;
+          font-size: 12px;
+          font-weight: 700;
+          margin-bottom: 14px;
+        }
+        .cs-subject-builder {
+          display: grid;
+          grid-template-columns: 160px minmax(140px, 1fr) minmax(220px, 2fr) 140px auto;
+          gap: 10px;
+          align-items: end;
+        }
+        .cs-subject-builder .cs-field { gap: 5px; }
+        .cs-subject-add {
+          border: none;
+          border-radius: 10px;
+          background: #4338ca;
+          color: #fff;
+          padding: 11px 16px;
+          font-weight: 800;
+          font-size: 13px;
+          cursor: pointer;
+          font-family: inherit;
+        }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ EXAM SELECTOR CHIPS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-exam-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+        .cs-exam-chip {
+          padding: 8px 14px;
+          border-radius: 24px;
+          font-size: 13px; font-weight: 600;
+          cursor: pointer;
+          border: 2px solid transparent;
+          transition: all .18s;
+          white-space: nowrap;
+        }
+        .cs-exam-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ WORK TILES ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-work-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .cs-work-tile {
+          border: 1.5px solid #e8edf7;
+          border-radius: 14px;
+          padding: 18px;
+          background: linear-gradient(135deg, #fafbff 0%, #fff 100%);
+          transition: all .2s;
+        }
+        .cs-work-tile:hover {
+          border-color: #c7d2fe;
+          box-shadow: 0 4px 16px rgba(99,102,241,.1);
+          transform: translateY(-1px);
+        }
+        .cs-work-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
+        .cs-work-rate {
+          font-size: 12px; color: #64748b;
+          margin-bottom: 14px;
+        }
+        .cs-work-amount {
+          font-size: 18px; font-weight: 800;
+          color: #4338ca;
+          margin-bottom: 14px;
+        }
+        .cs-counter {
+          display: flex; align-items: center; gap: 0;
+          background: #f1f5f9;
+          border-radius: 10px;
+          overflow: hidden;
+          width: fit-content;
+        }
+        .cs-counter-btn {
+          width: 36px; height: 36px;
+          border: none;
+          background: transparent;
+          font-size: 18px; font-weight: 700;
+          cursor: pointer;
+          color: #475569;
+          transition: all .15s;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .cs-counter-btn:hover { background: #e2e8f0; color: #1e293b; }
+        .cs-counter-btn:active { background: #cbd5e1; transform: scale(.92); }
+        .cs-counter-input {
+          min-width: 44px;
+          width: 76px;
+          border: none;
+          background: #fff;
+          text-align: center;
+          font-size: 16px; font-weight: 700;
+          color: #1e293b;
+          padding: 0 8px;
+          outline: none;
+          font-family: inherit;
+          align-self: stretch;
+        }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ AMOUNT INPUTS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-amount-field {
+          position: relative;
+        }
+        .cs-amount-prefix {
+          position: absolute;
+          left: 13px; top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 13px; font-weight: 600;
+          pointer-events: none;
+        }
+        .cs-amount-field .cs-input { padding-left: 32px; }
+        .cs-duty-grid {
+          display: grid;
+          grid-template-columns: minmax(180px, 1.4fr) minmax(150px, .8fr) minmax(120px, .6fr) minmax(120px, .6fr);
+          gap: 14px;
+          align-items: end;
+        }
+        .cs-textarea {
+          min-height: 72px;
+          resize: vertical;
+          line-height: 1.4;
+        }
+        .cs-duty-total {
+          border: 1px solid #bfdbfe;
+          background: #eff6ff;
+          color: #1e3a8a;
+          border-radius: 12px;
+          padding: 12px 14px;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .cs-duty-cal {
+          margin-top: 14px;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 14px 16px 12px;
+          background: linear-gradient(135deg, #fafbff 0%, #fff 100%);
+        }
+        .cs-duty-cal-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+        .cs-duty-cal-nav {
+          width: 38px;
+          height: 36px;
+          border-radius: 10px;
+          border: 1.5px solid #e2e8f0;
+          background: #fff;
+          font-size: 20px;
+          line-height: 1;
+          color: #475569;
+          cursor: pointer;
+          font-family: inherit;
+          transition: border-color .2s, background .2s;
+        }
+        .cs-duty-cal-nav:hover { border-color: #c7d2fe; background: #f8fafc; }
+        .cs-duty-cal-title {
+          font-size: 14px;
+          font-weight: 800;
+          color: #1e293b;
+        }
+        .cs-duty-cal-weekdays {
+          display: grid;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: 4px;
+          margin-bottom: 6px;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: .04em;
+          color: #94a3b8;
+          text-align: center;
+        }
+        .cs-duty-cal-grid {
+          display: grid;
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: 4px;
+        }
+        .cs-duty-cal-cell {
+          aspect-ratio: 1;
+          min-height: 36px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 700;
+          font-family: inherit;
+          border: 1.5px solid transparent;
+          background: transparent;
+        }
+        .cs-duty-cal-muted { visibility: hidden; pointer-events: none; }
+        .cs-duty-cal-day {
+          cursor: pointer;
+          background: #fff;
+          border-color: #e2e8f0;
+          color: #334155;
+          transition: transform .15s, border-color .15s, box-shadow .15s;
+        }
+        .cs-duty-cal-day:hover {
+          border-color: #a5b4fc;
+          box-shadow: 0 2px 8px rgba(99,102,241,.12);
+          transform: translateY(-1px);
+        }
+        .cs-duty-cal-day.is-selected {
+          border-color: transparent;
+          box-shadow: 0 4px 12px rgba(99,102,241,.35);
+        }
+        .cs-duty-cal-hint {
+          margin-top: 12px;
+          font-size: 11px;
+          color: #64748b;
+          font-weight: 600;
+          line-height: 1.4;
+        }
+        .cs-duty-dates-readout {
+          margin-top: 10px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #475569;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px dashed #cbd5e1;
+          background: #f8fafc;
+          line-height: 1.45;
+          min-height: 44px;
+        }
+        .cs-duty-clear-dates {
+          margin-top: 8px;
+          border: none;
+          background: none;
+          color: #6366f1;
+          font-weight: 700;
+          font-size: 12px;
+          cursor: pointer;
+          font-family: inherit;
+          padding: 4px 0;
+        }
+        .cs-duty-clear-dates:hover { text-decoration: underline; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SUMMARY CARD ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-summary { position: sticky; top: 88px; }
+        .cs-sum-header {
+          background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+          padding: 20px;
+          color: #fff;
+        }
+        .cs-sum-header h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .cs-sum-total-label { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .5px; margin-top: 12px; }
+        .cs-sum-total-val { font-size: 30px; font-weight: 800; margin-top: 4px; }
+        .cs-sum-body { padding: 20px; }
+        .cs-sum-row {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 10px 0;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 13px;
+        }
+        .cs-sum-row:last-of-type { border-bottom: none; }
+        .cs-sum-row-label { color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .cs-sum-row-dot {
+          width: 8px; height: 8px; border-radius: 50%;
+        }
+        .cs-sum-row-val { font-weight: 700; color: #1e293b; }
+        .cs-sum-row-val.zero { color: #cbd5e1; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ DIVIDER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-divider { height: 1px; background: #e2e8f0; margin: 4px 0 16px; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ STAFF BADGE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-staff-badge {
+          display: flex; align-items: center; gap: 10px;
+          padding: 12px 14px;
+          background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%);
+          border: 1.5px solid #bfdbfe;
+          border-radius: 12px;
+          margin-top: 8px;
+        }
+        .cs-staff-avatar {
+          width: 38px; height: 38px;
+          background: linear-gradient(135deg, #6366f1, #818cf8);
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; font-weight: 800; font-size: 15px;
+          flex-shrink: 0;
+        }
+        .cs-staff-name { font-size: 14px; font-weight: 700; color: #1e1b4b; }
+        .cs-staff-type {
+          font-size: 11px; font-weight: 600;
+          padding: 2px 8px; border-radius: 20px;
+          display: inline-block; margin-top: 2px;
+        }
+        .cs-staff-teaching { background: #dcfce7; color: #166534; }
+        .cs-staff-nonteaching { background: #fef3c7; color: #92400e; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ ALERTS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-alert {
+          border-radius: 12px;
+          padding: 12px 16px;
+          margin-bottom: 16px;
+          font-size: 13px; font-weight: 500;
+          display: flex; align-items: center; gap: 10px;
+          animation: slideDown .25s ease;
+        }
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .cs-alert-error { background: #fef2f2; border: 1.5px solid #fecaca; color: #991b1b; }
+        .cs-alert-success { background: #f0fdf4; border: 1.5px solid #bbf7d0; color: #166534; }
+        .cs-alert-icon { font-size: 16px; flex-shrink: 0; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ BUTTONS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .cs-save-btn {
+          flex: 1;
+          padding: 14px 20px;
+          background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+          color: #fff;
+          border: none; border-radius: 12px;
+          font-size: 14px; font-weight: 700;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: all .2s;
+          box-shadow: 0 4px 14px rgba(99,102,241,.4);
+          font-family: 'Inter', sans-serif;
+        }
+        .cs-save-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(99,102,241,.5);
+        }
+        .cs-save-btn:active:not(:disabled) { transform: translateY(0); }
+        .cs-save-btn:disabled { opacity: .6; cursor: not-allowed; }
+        .cs-reset-btn {
+          padding: 14px 18px;
+          background: #f1f5f9;
+          color: #475569;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          font-size: 14px; font-weight: 700;
+          cursor: pointer;
+          transition: all .2s;
+          font-family: 'Inter', sans-serif;
+        }
+        .cs-reset-btn:hover { background: #e2e8f0; border-color: #cbd5e1; }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SPINNER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-spinner {
+          width: 16px; height: 16px;
+          border: 2px solid rgba(255,255,255,.4);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin .6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SECTION DIVIDERS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        .cs-section-divider {
+          display: flex; align-items: center; gap: 10px;
+          margin: 0 0 14px;
+        }
+        .cs-section-divider span {
+          font-size: 11px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: .6px;
+          color: #94a3b8; white-space: nowrap;
+        }
+        .cs-section-divider::before,
+        .cs-section-divider::after {
+          content: ''; flex: 1; height: 1px; background: #e2e8f0;
+        }
+
+        /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ RESPONSIVE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
+        @media (max-width: 960px) {
+          .cs-body { grid-template-columns: 1fr; padding: 16px; }
+          .cs-grid2, .cs-work-grid { grid-template-columns: 1fr; }
+          .cs-summary { position: static; }
+          .cs-topbar { padding: 0 16px; }
+          .cs-exam-chips { gap: 6px; }
+        }
+      `}</style>
+
+      {/* TOP BAR */}
+      <div className="cs-topbar">
+        <div className="cs-topbar-left">
+          <div className="cs-logo">CS</div>
+          <div className="cs-brand">
+            <div className="cs-brand-sub">VJTI - MCA Department</div>
+            <div className="cs-brand-title">ESE / Re-ESE Charge Sheet</div>
+          </div>
+        </div>
+        <div className="cs-topbar-right">
+          <div className="cs-progress-pill">
+            <div className="cs-progress-bar-mini">
+              <div className="cs-progress-bar-fill" style={{ width: `${completionPercent}%` }} />
+            </div>
+            {completionPercent}% filled
+          </div>
+          <button className="cs-back-btn" onClick={() => navigate("/")}>
+            Dashboard
+          </button>
+        </div>
+      </div>
+
+      <div className="cs-body">
+        <div>
+          {/* Alerts */}
+          {error && (
+            <div className="cs-alert cs-alert-error">
+              <span className="cs-alert-icon">!</span> {error}
+            </div>
+          )}
+          {saved && (
+            <div className="cs-alert cs-alert-success">
+              <span className="cs-alert-icon">OK</span> Exam sheet saved successfully!
+            </div>
+          )}
+
+          {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARD 1: Exam Selection ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
+          <div className="cs-card">
+            <div className="cs-card-header">
+              <div className="cs-card-icon" style={{ background: "#ede9fe" }}>EX</div>
+              <h3>Exam Selection</h3>
+              {selectedExam && (
+                <span
+                  className="cs-card-badge"
+                  style={{ background: selectedExam.color + "1a", color: selectedExam.color }}
+                >
+                  {selectedExam.examType}
+                </span>
+              )}
+            </div>
+            <div className="cs-card-body">
+              {/* Chips */}
+              <div className="cs-section-divider"><span>Choose exam</span></div>
+              <div className="cs-exam-chips" style={{ marginBottom: 20 }}>
+                {EXAM_OPTIONS.map((opt) => {
+                  const active = form.examKey === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      className="cs-exam-chip"
+                      style={{
+                        background: active ? opt.color : "#f1f5f9",
+                        color: active ? "#fff" : "#475569",
+                        borderColor: active ? opt.color : "transparent",
+                        boxShadow: active ? `0 4px 14px ${opt.color}44` : "none",
+                      }}
+                      onClick={() => handleChange({ target: { name: "examKey", value: opt.key } })}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Info tiles */}
+              <div className="cs-grid2">
+                <div
+                  className="cs-info-tile"
+                  style={{
+                    borderColor: selectedExam.color + "33",
+                    background: selectedExam.color + "08",
+                  }}
+                >
+                  <span className="cs-info-tile-label" style={{ color: selectedExam.color }}>Academic Year & Semester</span>
+                  <span className="cs-info-tile-val">{selectedExam.academicYear} - {selectedExam.semester}</span>
+                  <span className="cs-info-tile-sub" style={{ color: "#64748b" }}>Exam type: {selectedExam.examType}</span>
+                </div>
+                <div
+                  className="cs-info-tile"
+                  style={{
+                    borderColor: selectedExam.color + "33",
+                    background: selectedExam.color + "08",
+                  }}
+                >
+                  <span className="cs-info-tile-label" style={{ color: selectedExam.color }}>Exam Period</span>
+                  <input
+                    className="cs-inline-edit"
+                    name="examPeriod"
+                    value={form.examPeriod}
+                    onChange={handleChange}
+                    placeholder="05/01/2026 to 19/01/2026"
+                  />
+                  <input
+                    className="cs-inline-edit small"
+                    name="examMonth"
+                    value={form.examMonth}
+                    onChange={handleChange}
+                    placeholder="January 2026"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="cs-card">
+            <div className="cs-card-header">
+              <div className="cs-card-icon" style={{ background: "#e0f2fe" }}>SUB</div>
+              <h3>Add Subject</h3>
+              <span className="cs-card-badge" style={{ background: "#e0f2fe", color: "#075985" }}>Custom</span>
+            </div>
+            <div className="cs-card-body">
+              <div className="cs-section-divider"><span>Subject details</span></div>
+              <div className="cs-subject-builder">
+                <div className="cs-field">
+                  <label className="cs-label">Semester</label>
+                  <select className="cs-select" value={subjectForm.semester} onChange={(e) => updateSubjectForm("semester", e.target.value)}>
+                    {Object.keys(COURSE_CATALOG).map((sem) => <option key={sem} value={sem}>{sem}</option>)}
+                  </select>
+                </div>
+                <div className="cs-field">
+                  <label className="cs-label">Course code</label>
+                  <input className="cs-input" value={subjectForm.code} onChange={(e) => updateSubjectForm("code", e.target.value)} placeholder="R5MC5021P" />
+                </div>
+                <div className="cs-field">
+                  <label className="cs-label">Subject name</label>
+                  <input className="cs-input" value={subjectForm.title} onChange={(e) => updateSubjectForm("title", e.target.value)} placeholder="Subject name" />
+                </div>
+                <div className="cs-field">
+                  <label className="cs-label">Type</label>
+                  <select className="cs-select" value={subjectForm.kind} onChange={(e) => updateSubjectForm("kind", e.target.value)}>
+                    <option value="theory">Theory</option>
+                    <option value="lab">Lab</option>
+                  </select>
+                </div>
+                <button type="button" className="cs-subject-add" onClick={addCustomSubject}>Add</button>
+              </div>
+            </div>
+          </div>
+
+          {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARD 2: Staff Member ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
+          <div className="cs-card">
+            <div className="cs-card-header">
+              <div className="cs-card-icon" style={{ background: "#dbeafe" }}>ST</div>
+              <h3>Staff Member</h3>
+              {form.designation && (
+                <span
+                  className="cs-card-badge"
+                  style={
+                    form.designation === "teaching"
+                      ? { background: "#dcfce7", color: "#166534" }
+                      : { background: "#fef3c7", color: "#92400e" }
+                  }
+                >
+                  {form.designation === "teaching" ? "Teaching" : "Non-Teaching"}
+                </span>
+              )}
+            </div>
+            <div className="cs-card-body">
+              <div className="cs-field">
+                <label className="cs-label">Select staff member <span>*</span></label>
+                <select
+                  className="cs-select"
+                  value={form.staffId}
+                  onChange={handleStaffSelect}
+                  disabled={loadingStaff}
+                >
+                  <option value="">
+                    {loadingStaff ? "Loading staff..." : "Choose staff member"}
+                  </option>
+                  {staff.map((s) => (
+                    <option key={s._id} value={s._id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {form.staffName && (
+                <div className="cs-staff-badge">
+                  <div className="cs-staff-avatar">
+                    {form.staffName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="cs-staff-name">{form.staffName}</div>
+                    <span className={`cs-staff-type ${form.designation === "teaching" ? "cs-staff-teaching" : "cs-staff-nonteaching"}`}>
+                      {form.designation === "teaching" ? "Teaching Staff" : "Non-Teaching Staff"}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARD 3: Teaching Sheet ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
+          {form.designation === "teaching" && (
+            <div className="cs-card">
+              <div className="cs-card-header">
+                <div className="cs-card-icon" style={{ background: "#dcfce7" }}>TS</div>
+                <h3>Teaching Exam Sheet</h3>
+              </div>
+              <div className="cs-card-body">
+                <div className="cs-section-divider"><span>Subject selection</span></div>
+                {labCourses.length > 0 && (
+                  <>
+                    <div className="cs-section-divider"><span>Lab subjects for {selectedExam.semester}</span></div>
+                    <div className="cs-lab-subjects">
+                      {labCourses.map((course) => (
+                        <div key={course.code} className="cs-lab-subject">
+                          <span className="cs-lab-code">{course.code}</span>
+                          <span className="cs-lab-title">{course.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="cs-grid2" style={{ marginBottom: 20 }}>
+                  <div className="cs-field">
+                    <label className="cs-label">Subject <span>*</span></label>
+                    <select className="cs-select" value={form.courseKey} onChange={handleCourseSelect}>
+                      <option value="">Select subject</option>
+                      {selectedCourses.map((course) => (
+                        <option key={course.code} value={course.code}>
+                          {course.kind === "lab" ? "Lab - " : "Theory - "}{course.code} {course.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="cs-field">
+                    <label className="cs-label">Course code</label>
+                    <input
+                      className="cs-input"
+                      name="courseCode"
+                      value={form.courseCode}
+                      readOnly
+                      placeholder="Auto-fills on subject select"
+                    />
+                  </div>
+                </div>
+
+                <div className="cs-section-divider"><span>Workload & remuneration</span></div>
+                {isLabCourse && (
+                  <div className="cs-lab-note">
+                    Lab subjects do not carry paper setting charges. Enter only No. of Papers Assessed at Rs 20 per paper.
+                  </div>
+                )}
+                <div className="cs-work-grid">
+                  {!isLabCourse && (
+                    <WorkTile
+                      icon="PS"
+                      name="Paper Setting"
+                      rate={form.paperSetRate}
+                      unit="per set"
+                      value={form.paperSets}
+                      amount={paperAmt}
+                      onMinus={() => setCount("paperSets", -1)}
+                      onPlus={() => setCount("paperSets", 1)}
+                      onValueChange={(value) => setCountValue("paperSets", value)}
+                      color="#6366f1"
+                    />
+                  )}
+                  <WorkTile
+                    icon="AS"
+                    name={isLabCourse ? "No. of Papers Assessed" : "Assessment"}
+                    rate={form.assessmentRate}
+                    unit="per paper"
+                    value={form.assessments}
+                    amount={assessmentAmt}
+                    onMinus={() => setCount("assessments", -1)}
+                    onPlus={() => setCount("assessments", 1)}
+                    onValueChange={(value) => setCountValue("assessments", value)}
+                    color="#10b981"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARD 4: Non-Teaching Sheet ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
+          {form.staffId && (
+            <div className="cs-card">
+              <div className="cs-card-header">
+                <div className="cs-card-icon" style={{ background: "#dbeafe" }}>DU</div>
+                <h3>Teaching / Non-Teaching Duty</h3>
+                <span className="cs-card-badge" style={{ background: "#eff6ff", color: "#1d4ed8" }}>
+                  Rate x Days
+                </span>
+              </div>
+              <div className="cs-card-body">
+                <div className="cs-section-divider"><span>Duty remuneration</span></div>
+                <div className="cs-duty-grid">
+                  <div className="cs-field">
+                    <label className="cs-label">Duty / role</label>
+                    <select
+                      className="cs-select"
+                      value={selectedDutyRole?.key || ""}
+                      onChange={handleDutyRoleChange}
+                    >
+                      <option value="">Select duty / role</option>
+                      {dutyRoleOptions.map((o) => (
+                        <option key={o.key} value={o.key}>
+                          {o.label} — Rs {o.rate}/session
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="cs-field">
+                    <label className="cs-label">Rate per session</label>
+                    <div className="cs-amount-field">
+                      <span className="cs-amount-prefix">Rs</span>
+                      <input
+                        className="cs-input"
+                        name="dutyRate"
+                        type="number"
+                        readOnly
+                        value={selectedDutyRole ? selectedDutyRole.rate : Number(form.dutyRate || 0)}
+                      />
+                    </div>
+                  </div>
+                  <div className="cs-field">
+                    <label className="cs-label">Total days</label>
+                    <input
+                      className="cs-input"
+                      name="dutyDays"
+                      type="number"
+                      readOnly
+                      value={dutyDateKeys.length}
+                    />
+                  </div>
+                  <div className="cs-duty-total">
+                    Amount<br />Rs {fmt(dutyAmount)}
+                  </div>
+                </div>
+                <div className="cs-field" style={{ marginTop: 14 }}>
+                  <label className="cs-label">Exam dates</label>
+                  <DutyExamCalendar
+                    value={dutyDateKeys}
+                    onChange={setDutyDateKeys}
+                    accent={selectedExam.color}
+                  />
+                  <div className="cs-duty-dates-readout">
+                    {dutyDatesJoined.trim() ? dutyDatesJoined : "No dates selected yet."}
+                  </div>
+                  {dutyDateKeys.length > 0 && (
+                    <button
+                      type="button"
+                      className="cs-duty-clear-dates"
+                      onClick={() => {
+                        setDutyDateKeys([]);
+                        setSaved(false);
+                      }}
+                    >
+                      Clear all dates
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {form.designation === "non-teaching" && (
+            <div className="cs-card">
+              <div className="cs-card-header">
+                <div className="cs-card-icon" style={{ background: "#fef3c7" }}>SS</div>
+                <h3>Support Staff Sheet</h3>
+              </div>
+              <div className="cs-card-body">
+                <div className="cs-section-divider"><span>Remuneration details</span></div>
+                <div className="cs-grid2">
+                  <div className="cs-field">
+                    <label className="cs-label">Exam conduction amount</label>
+                    <div className="cs-amount-field">
+                      <span className="cs-amount-prefix">Rs</span>
+                      <input
+                        className="cs-input"
+                        name="examConduction"
+                        type="number"
+                        value={form.examConduction}
+                        onChange={handleChange}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="cs-field">
+                    <label className="cs-label">Invigilation / reliever amount</label>
+                    <div className="cs-amount-field">
+                      <span className="cs-amount-prefix">Rs</span>
+                      <input
+                        className="cs-input"
+                        name="invigilation"
+                        type="number"
+                        value={form.invigilation}
+                        onChange={handleChange}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SIDEBAR: Summary ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
+        <div className="cs-summary">
+          <div className="cs-card" style={{ overflow: "hidden" }}>
+            <div className="cs-sum-header">
+              <h3>Amount Summary</h3>
+              <div style={{ fontSize: 12, opacity: .7, marginBottom: 4 }}>{selectedExam.label}</div>
+              <div className="cs-sum-total-label">Grand Total</div>
+              <div className="cs-sum-total-val">Rs {fmt(grandTotal)}</div>
+            </div>
+            <div className="cs-sum-body">
+              <SumRow dot="#6366f1" label="Paper Setting" value={paperAmt} fmt={fmt} />
+              <SumRow dot="#10b981" label="Assessment" value={assessmentAmt} fmt={fmt} />
+              <SumRow dot="#f59e0b" label="Exam Conduction" value={form.examConduction} fmt={fmt} />
+              <SumRow dot="#f43f5e" label="Invigilation / Reliever" value={form.invigilation} fmt={fmt} />
+              <SumRow dot="#2563eb" label="Teaching / Non-Teaching Duty" value={dutyAmount} fmt={fmt} />
+
+              <div className="cs-divider" />
+
+              {form.staffName && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>
+                    Assigned to
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #818cf8)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 13 }}>
+                      {form.staffName.charAt(0)}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700 }}>{form.staffName}</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8" }}>{form.designation}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="cs-actions">
+                <button className="cs-save-btn" onClick={handleSubmit} disabled={saving}>
+                  {saving ? <><div className="cs-spinner" /> Saving...</> : <>Save Sheet</>}
+                </button>
+                <button className="cs-reset-btn" onClick={handleReset} title="Reset form">Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function WorkTile({ icon, name, rate, unit, value, amount, onMinus, onPlus, onValueChange, color }) {
+  const fmt = (v) => Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+  return (
+    <div className="cs-work-tile">
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span className="cs-work-title">{name}</span>
+      </div>
+      <div className="cs-work-rate">Rs {fmt(rate)} {unit}</div>
+      <div className="cs-work-amount" style={{ color }}>Rs {fmt(amount)}</div>
+      <div className="cs-counter">
+        <button className="cs-counter-btn" type="button" onClick={onMinus}>-</button>
+        <input
+          className="cs-counter-input"
+          type="number"
+          min="0"
+          value={value}
+          onChange={(e) => onValueChange(e.target.value)}
+          aria-label={`${name} count`}
+        />
+        <button className="cs-counter-btn" type="button" onClick={onPlus}>+</button>
+      </div>
+    </div>
+  );
+}
+
+function SumRow({ dot, label, value, fmt }) {
+  const isZero = Number(value || 0) === 0;
+  return (
+    <div className="cs-sum-row">
+      <span className="cs-sum-row-label">
+        <span className="cs-sum-row-dot" style={{ background: isZero ? "#e2e8f0" : dot }} />
+        {label}
+      </span>
+      <span className={`cs-sum-row-val ${isZero ? "zero" : ""}`}>
+        Rs {fmt(value)}
+      </span>
+    </div>
+  );
+}
+
+export default Chargesheet;
