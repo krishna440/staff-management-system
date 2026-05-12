@@ -24,6 +24,13 @@ function assessmentAmountForEntry(entry) {
   return amount;
 }
 
+function paperSettingAmountForEntry(entry) {
+  if (entry?.examType === "Re-ESE") {
+    return 0;
+  }
+  return Number(entry?.paperSets || 0) * Number(entry?.paperSetRate || 0);
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem("user") || "null");
@@ -137,7 +144,7 @@ const Dashboard = () => {
   };
 
   const editTotal = (entry = editForm) =>
-    Number(entry?.paperSets || 0) * Number(entry?.paperSetRate || 0) +
+    paperSettingAmountForEntry(entry) +
     assessmentAmountForEntry(entry) +
     Number(entry?.examConduction || 0) +
     Number(entry?.invigilation || 0);
@@ -182,7 +189,10 @@ const Dashboard = () => {
 
   const rateCfg = loadTaskRates();
   const paperCost = (data?.chargesheets || []).reduce(
-    (sum, entry) => sum + Number(entry?.paperSets || 0) * Number(entry?.paperSetRate || rateCfg.paperSettingPerSet),
+    (sum, entry) => sum + paperSettingAmountForEntry({
+      ...entry,
+      paperSetRate: entry?.paperSetRate || rateCfg.paperSettingPerSet,
+    }),
     0
   );
   const supervisionCost = (data?.chargesheets || []).reduce(

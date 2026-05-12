@@ -153,6 +153,13 @@ function assessmentAmountForEntry(entry) {
   return amount;
 }
 
+function paperSettingAmountForEntry(entry) {
+  if (entry.examType === "Re-ESE") {
+    return 0;
+  }
+  return Number(entry.paperSets || 0) * Number(entry.paperSetRate || 0);
+}
+
 function emptyChargeForm() {
   const first = EXAM_OPTIONS[0];
   return {
@@ -470,7 +477,7 @@ const Chargesheet = () => {
         ...form,
         dutyDates: dutyDatesJoined,
         dutyDays: dutyDaysFromCalendar,
-        paperSets: isLabCourse ? 0 : form.paperSets,
+        paperSets: isLabCourse || selectedExam.examType === "Re-ESE" ? 0 : form.paperSets,
         academicYear: selectedExam.academicYear,
         semester: selectedExam.semester,
         examType: selectedExam.examType,
@@ -508,7 +515,10 @@ const Chargesheet = () => {
 
   const fmt = (val) => Number(val || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
-  const paperAmt = isLabCourse ? 0 : Number(form.paperSets || 0) * Number(form.paperSetRate || 0);
+  const paperAmt = isLabCourse ? 0 : paperSettingAmountForEntry({
+    ...form,
+    examType: selectedExam.examType,
+  });
   const assessmentAmt = assessmentAmountForEntry({
     ...form,
     examType: selectedExam.examType,
@@ -1379,13 +1389,15 @@ const Chargesheet = () => {
                 </div>
 
                 <div className="cs-section-divider"><span>Workload & remuneration</span></div>
-                {isLabCourse && (
+                {(isLabCourse || selectedExam.examType === "Re-ESE") && (
                   <div className="cs-lab-note">
-                    Lab subjects do not carry paper setting charges. Enter only No. of Papers Assessed at Rs 20 per paper.
+                    {selectedExam.examType === "Re-ESE"
+                      ? "Re-ESE does not carry paper setting charges. Enter only assessment papers."
+                      : "Lab subjects do not carry paper setting charges. Enter only No. of Papers Assessed at Rs 20 per paper."}
                   </div>
                 )}
                 <div className="cs-work-grid">
-                  {!isLabCourse && (
+                  {!isLabCourse && selectedExam.examType !== "Re-ESE" && (
                     <WorkTile
                       icon="PS"
                       name="Paper Setting"

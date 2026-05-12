@@ -10,9 +10,16 @@ function assessmentAmountForEntry(entry) {
   return amount;
 }
 
+function paperSettingAmountForEntry(entry) {
+  if (entry.examType === "Re-ESE") {
+    return 0;
+  }
+  return (Number(entry.paperSets) || 0) * (Number(entry.paperSetRate) || 0);
+}
+
 function totalAmountForEntry(entry) {
   return (
-    (Number(entry.paperSets) || 0) * (Number(entry.paperSetRate) || 0) +
+    paperSettingAmountForEntry(entry) +
     assessmentAmountForEntry(entry) +
     (Number(entry.examConduction) || 0) +
     (Number(entry.invigilation) || 0) +

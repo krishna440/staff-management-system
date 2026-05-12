@@ -17,6 +17,37 @@ function assessmentAmountForRow(row) {
   return amount;
 }
 
+function paperSettingAmountForRow(row) {
+  if (row.examType === "Re-ESE") {
+    return 0;
+  }
+  return Number(row.paperSets || 0) * paperRateForRow(row);
+}
+
+function isConductionDuty(row) {
+  const role = String(row.dutyRole || "").toLowerCase();
+  return role.includes("hod") || role.includes("coordinator");
+}
+
+function hasTeachingExamWork(row) {
+  return Number(row.paperSets || 0) > 0 || Number(row.assessments || 0) > 0;
+}
+
+function conductionAmount(row) {
+  const directConduction = Number(row.examConduction || 0);
+  const duty = isConductionDuty(row) ? dutyAmount(row) : 0;
+  const standaloneSupport = !hasTeachingExamWork(row) && directConduction === 0 && Number(row.invigilation || 0) >= 1000
+    ? Number(row.invigilation || 0)
+    : 0;
+  return directConduction + duty + standaloneSupport;
+}
+
+function invigilationAmount(row) {
+  const directInvigilation = Number(row.invigilation || 0);
+  const standaloneMovedToConduction = !hasTeachingExamWork(row) && Number(row.examConduction || 0) === 0 && directInvigilation >= 1000;
+  return (standaloneMovedToConduction ? 0 : directInvigilation) + (isConductionDuty(row) ? 0 : dutyAmount(row));
+}
+
 const EXAM_DEFINITIONS = [
   {
     label: "FY Sem I - ESE",
@@ -161,7 +192,7 @@ function buildTeachingSheet(exam, allRows) {
     staffRows.forEach((row, index) => {
       const paperSets = Number(row.paperSets || 0);
       const assessments = Number(row.assessments || 0);
-      const paperAmount = paperSets * paperRateForRow(row);
+      const paperAmount = paperSettingAmountForRow(row);
       const assessmentAmount = assessmentAmountForRow(row);
       rows.push({
         cells: [
@@ -227,12 +258,16 @@ function buildSupportSheet(exam, allRows) {
   supportRows.forEach((row) => {
     const supportItems = [];
     const calculatedDuty = dutyAmount(row);
-    const conduction = Number(row.examConduction || 0);
-    const invigilation = Number(row.invigilation || 0);
+    const standaloneMovedToConduction =
+      !hasTeachingExamWork(row) &&
+      Number(row.examConduction || 0) === 0 &&
+      Number(row.invigilation || 0) >= 1000;
+    const conduction = Number(row.examConduction || 0) + (standaloneMovedToConduction ? Number(row.invigilation || 0) : 0);
+    const invigilation = standaloneMovedToConduction ? 0 : Number(row.invigilation || 0);
 
     if (calculatedDuty > 0 || row.dutyRole || row.dutyDates) {
       supportItems.push({
-        name: `${row.dutyRole || "Exam Duty"} - ${row.staffName || ""}`,
+        name: `${isConductionDuty(row) ? "Exam Conduction" : row.dutyRole || "Exam Duty"} - ${row.staffName || ""}`,
         rate: Number(row.dutyRate || 0),
         dates: row.dutyDates || row.examPeriod || exam.period,
         days: Number(row.dutyDays || 0),
@@ -352,12 +387,9 @@ function buildTotalSheet(exam, allRows) {
   let grandTotal = 0;
 
   grouped.forEach((staffRows, staffName) => {
-    const examConduction = sum(staffRows, (row) => Number(row.examConduction || 0));
-    const invigilation = sum(staffRows, (row) => Number(row.invigilation || 0) + dutyAmount(row));
-    const paperSetting = sum(
-      staffRows,
-      (row) => Number(row.paperSets || 0) * paperRateForRow(row)
-    );
+    const examConduction = sum(staffRows, (row) => conductionAmount(row));
+    const invigilation = sum(staffRows, (row) => invigilationAmount(row));
+    const paperSetting = sum(staffRows, (row) => paperSettingAmountForRow(row));
     const assessment = sum(staffRows, (row) => assessmentAmountForRow(row));
     const receivable = examConduction + invigilation + paperSetting + assessment;
     grandTotal += receivable;
@@ -487,7 +519,7 @@ function courseLabel(row) {
 
 function teachingAmount(row) {
   return (
-    Number(row.paperSets || 0) * paperRateForRow(row) +
+    paperSettingAmountForRow(row) +
     assessmentAmountForRow(row)
   );
 }

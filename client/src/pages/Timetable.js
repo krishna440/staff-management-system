@@ -37,6 +37,17 @@ const DEFAULT_LAB_SLOTS = [
   { id: "slot4", label: "3.30 PM to 5.00 PM" },
 ];
 
+const SAVED_TIMETABLES_KEY = "mca_saved_timetables_v1";
+
+function loadSavedTimetables() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVED_TIMETABLES_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function Timetable() {
   const navigate = useNavigate();
   const [staff, setStaff] = useState([]);
@@ -55,6 +66,8 @@ export default function Timetable() {
   const [labSlots, setLabSlots] = useState(DEFAULT_LAB_SLOTS);
   const [activeTab, setActiveTab] = useState("theory");
   const [downloading, setDownloading] = useState("");
+  const [savedTimetables, setSavedTimetables] = useState(loadSavedTimetables);
+  const [previewTimetable, setPreviewTimetable] = useState(null);
 
   const courses = useMemo(
     () => getCoursesForSemester(settings.semester),
@@ -182,42 +195,83 @@ export default function Timetable() {
     setLabRows((prev) => (prev.length === 1 ? prev : prev.filter((row) => row.id !== id)));
   };
 
-  const title = timetableTitle(settings);
-  const semLabel = settings.semester.replace("Sem ", "Sem-");
+  const currentTimetable = () => ({
+    id: Date.now(),
+    name: `${settings.examType} ${settings.semester} ${settings.month} ${settings.year}`,
+    updatedAt: new Date().toISOString(),
+    settings,
+    theoryRows,
+    labRows,
+    labSlots,
+  });
 
-  const downloadTheoryPdf = async () => {
+  const saveTimetables = (items) => {
+    setSavedTimetables(items);
+    localStorage.setItem(SAVED_TIMETABLES_KEY, JSON.stringify(items));
+  };
+
+  const saveCurrentTimetable = () => {
+    const item = currentTimetable();
+    saveTimetables([item, ...savedTimetables]);
+    setPreviewTimetable(item);
+  };
+
+  const editSavedTimetable = (item) => {
+    setSettings(item.settings);
+    setTheoryRows(item.theoryRows?.length ? item.theoryRows : [DEFAULT_THEORY_ROW]);
+    setLabRows(item.labRows?.length ? item.labRows : [DEFAULT_LAB_ROW]);
+    setLabSlots(item.labSlots?.length ? item.labSlots : DEFAULT_LAB_SLOTS);
+    setPreviewTimetable(null);
+    setActiveTab("theory");
+  };
+
+  const deleteSavedTimetable = (id) => {
+    const next = savedTimetables.filter((item) => item.id !== id);
+    saveTimetables(next);
+    if (previewTimetable?.id === id) setPreviewTimetable(null);
+  };
+
+  const downloadTheoryPdf = async (source = currentTimetable()) => {
+    const s = source.settings;
+    const rows = source.theoryRows || [];
+    const docTitle = timetableTitle(s);
+    const docSemLabel = s.semester.replace("Sem ", "Sem-");
     setDownloading("theory");
     const doc = makeDoc("p");
-    await drawHeader(doc, settings, title);
+    await drawHeader(doc, s, docTitle);
     doc.setFontSize(12);
-    doc.text(`Date: ${displayDate(settings.noticeDate)}`, 472, 150, { align: "right" });
+    doc.text(`Date: ${displayDate(s.noticeDate)}`, 472, 150, { align: "right" });
     autoTable(doc, {
       startY: 158,
       margin: { left: 54, right: 54 },
       theme: "grid",
-      head: [["Day and Date", "Time of Exam", `Course code and Course name for ${classLabel(settings.semester)}`]],
-      body: theoryRows.map((row) => [displayDate(row.date), row.time, courseLine(row)]),
+      head: [["Day and Date", "Time of Exam", `Course code and Course name for ${classLabel(s.semester)}`]],
+      body: rows.map((row) => [displayDate(row.date), row.time, courseLine(row)]),
       styles: tableStyles(10),
       headStyles: headStyles(),
       columnStyles: { 0: { cellWidth: 120, halign: "center" }, 1: { cellWidth: 120, halign: "center" }, 2: { cellWidth: 280 } },
     });
     drawTheoryFooter(doc);
-    doc.save(`MCA_${settings.examType}_${semLabel}_Timetable.pdf`);
+    doc.save(`MCA_${s.examType}_${docSemLabel}_Timetable.pdf`);
     setTimeout(() => setDownloading(""), 600);
   };
 
-  const downloadSupervisionPdf = async () => {
+  const downloadSupervisionPdf = async (source = currentTimetable()) => {
+    const s = source.settings;
+    const rows = source.theoryRows || [];
+    const docTitle = timetableTitle(s);
+    const docSemLabel = s.semester.replace("Sem ", "Sem-");
     setDownloading("supervision");
     const doc = makeDoc("l");
-    await drawHeader(doc, settings, title, { showSupervision: true });
+    await drawHeader(doc, s, docTitle, { showSupervision: true });
     doc.setFontSize(12);
-    doc.text(`Date: ${displayDate(settings.noticeDate)}`, 770, 150, { align: "right" });
+    doc.text(`Date: ${displayDate(s.noticeDate)}`, 770, 150, { align: "right" });
     autoTable(doc, {
       startY: 158,
       margin: { left: 54, right: 54 },
       theme: "grid",
-      head: [["Day and Date", "Time of Exam", `Course code and Course Name for ${classLabel(settings.semester)}`, "AL301", "AL207", "Reliever Duties"]],
-      body: theoryRows.map((row) => [displayDate(row.date), row.time, courseLine(row), row.roomA || "", row.roomB || "", row.reliever || ""]),
+      head: [["Day and Date", "Time of Exam", `Course code and Course Name for ${classLabel(s.semester)}`, "AL301", "AL207", "Reliever Duties"]],
+      body: rows.map((row) => [displayDate(row.date), row.time, courseLine(row), row.roomA || "", row.roomB || "", row.reliever || ""]),
       styles: tableStyles(10),
       headStyles: headStyles(),
       columnStyles: {
@@ -226,11 +280,15 @@ export default function Timetable() {
       },
     });
     drawWideFooter(doc);
-    doc.save(`MCA_${settings.examType}_${semLabel}_Supervision_Duties.pdf`);
+    doc.save(`MCA_${s.examType}_${docSemLabel}_Supervision_Duties.pdf`);
     setTimeout(() => setDownloading(""), 600);
   };
 
-  const downloadLabPdf = async () => {
+  const downloadLabPdf = async (source = currentTimetable()) => {
+    const s = source.settings;
+    const rows = source.labRows || [];
+    const slots = source.labSlots || DEFAULT_LAB_SLOTS;
+    const docSemLabel = s.semester.replace("Sem ", "Sem-");
     setDownloading("lab");
     const doc = makeDoc("l");
     await addVjtiLogoToPdf(doc, { x: 68, y: 28, width: 42, height: 42 });
@@ -239,10 +297,10 @@ export default function Timetable() {
     doc.setFontSize(10); doc.setFont("times", "bolditalic");
     doc.text("Master of Computer Application", 421, 56, { align: "center" });
     doc.setFont("times", "normal"); doc.setFontSize(11);
-    doc.text(`Date: ${displayDate(settings.noticeDate)}`, 728, 82, { align: "right" });
+    doc.text(`Date: ${displayDate(s.noticeDate)}`, 728, 82, { align: "right" });
     doc.setFont("times", "bold"); doc.setFontSize(12);
     doc.text(
-      `Time table for ${labExamLabel(settings)} Lab Examination, ${labTermLabel(settings.term)} semester of AY ${settings.academicYear}, ${labSemesterLabel(settings.semester)}, ${settings.month} ${settings.year}`,
+      `Time table for ${labExamLabel(s)} Lab Examination, ${labTermLabel(s.term)} semester of AY ${s.academicYear}, ${labSemesterLabel(s.semester)}, ${s.month} ${s.year}`,
       421, 114, { align: "center" }
     );
     autoTable(doc, {
@@ -254,25 +312,33 @@ export default function Timetable() {
           { content: "Date & Date" },
           { content: "Details of Examination", colSpan: labSlots.length },
         ],
-        ["Time", ...labSlots.map((slot) => slot.label)],
+        ["Time", ...slots.map((slot) => slot.label)],
       ],
-      body: labTableBody(labRows, labSlots),
+      body: labTableBody(rows, slots),
       styles: tableStyles(8.5),
       headStyles: headStyles(),
-      columnStyles: labColumnStyles(labSlots.length),
+      columnStyles: labColumnStyles(slots.length),
     });
     const afterTableY = doc.lastAutoTable.finalY + 14;
     doc.setFont("times", "bold");
-    doc.text(`Note: ${settings.labNote}`, 421, afterTableY, { align: "center" });
+    doc.text(`Note: ${s.labNote}`, 421, afterTableY, { align: "center" });
     doc.setFont("times", "normal");
     doc.text("Exam Coordinator", 92, afterTableY + 48);
     doc.text("Head of Department", 664, afterTableY + 48);
     doc.text("Copy to,", 54, afterTableY + 82);
     doc.text("1. Students through proper media", 72, afterTableY + 100);
     doc.text("2. Department notice board", 72, afterTableY + 116);
-    doc.save(`MCA_${settings.examType}_${semLabel}_Lab_Timetable.pdf`);
+    doc.save(`MCA_${s.examType}_${docSemLabel}_Lab_Timetable.pdf`);
     setTimeout(() => setDownloading(""), 600);
   };
+
+  const downloadSavedTimetable = async (item) => {
+    await downloadTheoryPdf(item);
+    await downloadSupervisionPdf(item);
+    await downloadLabPdf(item);
+  };
+
+  const title = timetableTitle(settings);
 
   const completionStats = useMemo(() => {
     const filledTheory = theoryRows.filter((r) => r.date && r.courseCode).length;
@@ -553,6 +619,74 @@ export default function Timetable() {
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ EXPORT ACTIONS Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="tt-card">
           <div className="tt-card-header">
+            <div className="tt-card-icon" style={{ background: "#e0f2fe" }}>SV</div>
+            <h2>Saved Time Table</h2>
+            <span className="tt-card-badge" style={{ background: "#e0f2fe", color: "#0369a1" }}>
+              {savedTimetables.length} saved
+            </span>
+            <button className="tt-add-btn" onClick={saveCurrentTimetable}>Save Time Table</button>
+          </div>
+          <div className="tt-card-body">
+            {savedTimetables.length === 0 ? (
+              <div className="tt-empty-saved">No saved timetable yet.</div>
+            ) : (
+              <div className="tt-saved-list">
+                {savedTimetables.map((item) => (
+                  <div key={item.id} className="tt-saved-row">
+                    <div>
+                      <div className="tt-saved-title">{item.name}</div>
+                      <div className="tt-saved-meta">
+                        {item.theoryRows?.length || 0} theory rows - {item.labRows?.length || 0} lab rows - {new Date(item.updatedAt).toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div className="tt-saved-actions">
+                      <button className="tt-mini-action" onClick={() => setPreviewTimetable(item)}>Preview</button>
+                      <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}>Edit</button>
+                      <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}>Download</button>
+                      <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id)} title="Delete saved timetable">X</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {previewTimetable && (
+              <div className="tt-preview-panel">
+                <div className="tt-section-divider"><span>{previewTimetable.name} preview</span></div>
+                <div className="tt-preview-table-wrap">
+                  <table className="tt-preview-table">
+                    <thead>
+                      <tr><th>Date</th><th>Time</th><th>Course</th><th>AL301</th><th>AL207</th><th>Reliever</th></tr>
+                    </thead>
+                    <tbody>
+                      {(previewTimetable.theoryRows || []).map((row) => (
+                        <tr key={row.id}>
+                          <td>{displayDate(row.date)}</td>
+                          <td>{row.time}</td>
+                          <td>{courseLine(row)}</td>
+                          <td>{row.roomA}</td>
+                          <td>{row.roomB}</td>
+                          <td>{row.reliever}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="tt-preview-lab">
+                  {(previewTimetable.labRows || []).slice(0, 4).map((row) => (
+                    <div key={row.id} className="tt-preview-lab-row">
+                      <strong>{labDateLabel(row) || "Lab row"}</strong>
+                      <span>{(previewTimetable.labSlots || []).map((slot) => row.slots?.[slot.id]).filter(Boolean).join(" | ") || "No lab slots filled"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="tt-card">
+          <div className="tt-card-header">
             <div className="tt-card-icon" style={{ background: "#fee2e2" }}>PDF</div>
             <h2>Export PDF Documents</h2>
           </div>
@@ -564,7 +698,7 @@ export default function Timetable() {
                 title="Theory Timetable"
                 desc="Standard examination schedule (portrait)"
                 loading={downloading === "theory"}
-                onClick={downloadTheoryPdf}
+                onClick={() => downloadTheoryPdf()}
               />
               <ExportCard
                 icon="SD"
@@ -572,7 +706,7 @@ export default function Timetable() {
                 title="Supervision Duties"
                 desc="Includes invigilator assignments (landscape)"
                 loading={downloading === "supervision"}
-                onClick={downloadSupervisionPdf}
+                onClick={() => downloadSupervisionPdf()}
               />
               <ExportCard
                 icon="LAB"
@@ -580,7 +714,7 @@ export default function Timetable() {
                 title="Lab Timetable"
                 desc="Practical exam slots (landscape)"
                 loading={downloading === "lab"}
-                onClick={downloadLabPdf}
+                onClick={() => downloadLabPdf()}
               />
             </div>
           </div>
@@ -1142,6 +1276,89 @@ const css = `
   }
   .tt-mini-action:hover {
     background: #e0e7ff;
+  }
+
+  .tt-empty-saved {
+    padding: 18px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    color: #64748b;
+    font-size: 13px;
+    text-align: center;
+  }
+  .tt-saved-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tt-saved-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+  }
+  .tt-saved-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+  .tt-saved-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
+  }
+  .tt-saved-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .tt-preview-panel {
+    margin-top: 18px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+  }
+  .tt-preview-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+  }
+  .tt-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+    font-size: 12px;
+  }
+  .tt-preview-table th,
+  .tt-preview-table td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+  }
+  .tt-preview-table th {
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 800;
+  }
+  .tt-preview-lab {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .tt-preview-lab-row {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #f8fafc;
+    font-size: 12px;
+    color: #475569;
   }
 
   /* Ã¢â€â‚¬Ã¢â€â‚¬ EXPORT GRID Ã¢â€â‚¬Ã¢â€â‚¬ */
