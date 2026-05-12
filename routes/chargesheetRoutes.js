@@ -2,16 +2,30 @@ const express = require("express");
 const router = express.Router();
 const Chargesheet = require("../models/chargesheet");
 
+function assessmentAmountForEntry(entry) {
+  const assessments = Number(entry.assessments) || 0;
+  const amount = assessments * (Number(entry.assessmentRate) || 0);
+  if (assessments > 0 && entry.examType === "Re-ESE") {
+    return Math.max(amount, 200);
+  }
+  return amount;
+}
+
+function totalAmountForEntry(entry) {
+  return (
+    (Number(entry.paperSets) || 0) * (Number(entry.paperSetRate) || 0) +
+    assessmentAmountForEntry(entry) +
+    (Number(entry.examConduction) || 0) +
+    (Number(entry.invigilation) || 0) +
+    (Number(entry.dutyDays) || 0) * (Number(entry.dutyRate) || 0)
+  );
+}
+
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
     const dutyAmount = (Number(data.dutyDays) || 0) * (Number(data.dutyRate) || 0);
-    const total =
-      (Number(data.paperSets) || 0) * (Number(data.paperSetRate) || 0) +
-      (Number(data.assessments) || 0) * (Number(data.assessmentRate) || 0) +
-      (Number(data.examConduction) || 0) +
-      (Number(data.invigilation) || 0) +
-      dutyAmount;
+    const total = totalAmountForEntry(data);
 
     const newEntry = new Chargesheet({
       ...data,
@@ -32,7 +46,7 @@ router.get("/", async (req, res) => {
   try {
     const query = req.query.month ? { month: req.query.month } : {};
     const data = await Chargesheet.find(query).sort({ _id: -1 });
-    res.json(data);
+    res.json(data.map((entry) => ({ ...entry.toObject(), total: totalAmountForEntry(entry) })));
   } catch (err) {
     res.status(500).json({ message: "Error fetching chargesheets" });
   }
@@ -82,12 +96,7 @@ router.put("/:id", async (req, res) => {
     });
 
     Object.assign(existing, updates);
-    existing.total =
-      (Number(existing.paperSets) || 0) * (Number(existing.paperSetRate) || 0) +
-      (Number(existing.assessments) || 0) * (Number(existing.assessmentRate) || 0) +
-      (Number(existing.examConduction) || 0) +
-      (Number(existing.invigilation) || 0) +
-      (Number(existing.dutyDays) || 0) * (Number(existing.dutyRate) || 0);
+    existing.total = totalAmountForEntry(existing);
     existing.dutyAmount = (Number(existing.dutyDays) || 0) * (Number(existing.dutyRate) || 0);
 
     await existing.save();

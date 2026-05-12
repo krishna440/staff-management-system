@@ -144,6 +144,15 @@ const STATIC_FORM_FIELDS = {
   dutyRate: 0,
 };
 
+function assessmentAmountForEntry(entry) {
+  const assessments = Number(entry.assessments || 0);
+  const amount = assessments * Number(entry.assessmentRate || 0);
+  if (assessments > 0 && entry.examType === "Re-ESE") {
+    return Math.max(amount, 200);
+  }
+  return amount;
+}
+
 function emptyChargeForm() {
   const first = EXAM_OPTIONS[0];
   return {
@@ -500,7 +509,10 @@ const Chargesheet = () => {
   const fmt = (val) => Number(val || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
   const paperAmt = isLabCourse ? 0 : Number(form.paperSets || 0) * Number(form.paperSetRate || 0);
-  const assessmentAmt = Number(form.assessments || 0) * Number(form.assessmentRate || 0);
+  const assessmentAmt = assessmentAmountForEntry({
+    ...form,
+    examType: selectedExam.examType,
+  });
   const dutyAmount = dutyDaysFromCalendar * Number(form.dutyRate || 0);
   const grandTotal = paperAmt + assessmentAmt + Number(form.examConduction || 0) + Number(form.invigilation || 0) + dutyAmount;
 

@@ -15,6 +15,15 @@ const EXAM_MONTHS = [
   "December 2026",
 ];
 
+function assessmentAmountForEntry(entry) {
+  const assessments = Number(entry?.assessments || 0);
+  const amount = assessments * Number(entry?.assessmentRate || 0);
+  if (assessments > 0 && entry?.examType === "Re-ESE") {
+    return Math.max(amount, 200);
+  }
+  return amount;
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem("user") || "null");
@@ -129,7 +138,7 @@ const Dashboard = () => {
 
   const editTotal = (entry = editForm) =>
     Number(entry?.paperSets || 0) * Number(entry?.paperSetRate || 0) +
-    Number(entry?.assessments || 0) * Number(entry?.assessmentRate || 0) +
+    assessmentAmountForEntry(entry) +
     Number(entry?.examConduction || 0) +
     Number(entry?.invigilation || 0);
 
@@ -172,9 +181,17 @@ const Dashboard = () => {
   };
 
   const rateCfg = loadTaskRates();
-  const paperCost = (data?.papersSet || 0) * rateCfg.paperSettingPerSet;
-  const supervisionCost =
-    (data?.supervisionCount || 0) * rateCfg.assessmentPerPaper;
+  const paperCost = (data?.chargesheets || []).reduce(
+    (sum, entry) => sum + Number(entry?.paperSets || 0) * Number(entry?.paperSetRate || rateCfg.paperSettingPerSet),
+    0
+  );
+  const supervisionCost = (data?.chargesheets || []).reduce(
+    (sum, entry) => sum + assessmentAmountForEntry({
+      ...entry,
+      assessmentRate: entry?.assessmentRate || rateCfg.assessmentPerPaper,
+    }),
+    0
+  );
   const lectureCost = 0;
 
   const grandTotal =

@@ -8,6 +8,15 @@ function assessmentRateForRow(row) {
   return Number(row.assessmentRate) || loadTaskRates().assessmentPerPaper;
 }
 
+function assessmentAmountForRow(row) {
+  const assessments = Number(row.assessments || 0);
+  const amount = assessments * assessmentRateForRow(row);
+  if (assessments > 0 && row.examType === "Re-ESE") {
+    return Math.max(amount, 200);
+  }
+  return amount;
+}
+
 const EXAM_DEFINITIONS = [
   {
     label: "FY Sem I - ESE",
@@ -153,7 +162,7 @@ function buildTeachingSheet(exam, allRows) {
       const paperSets = Number(row.paperSets || 0);
       const assessments = Number(row.assessments || 0);
       const paperAmount = paperSets * paperRateForRow(row);
-      const assessmentAmount = assessments * assessmentRateForRow(row);
+      const assessmentAmount = assessmentAmountForRow(row);
       rows.push({
         cells: [
           { value: sr, style: STYLE.center },
@@ -349,10 +358,7 @@ function buildTotalSheet(exam, allRows) {
       staffRows,
       (row) => Number(row.paperSets || 0) * paperRateForRow(row)
     );
-    const assessment = sum(
-      staffRows,
-      (row) => Number(row.assessments || 0) * assessmentRateForRow(row)
-    );
+    const assessment = sum(staffRows, (row) => assessmentAmountForRow(row));
     const receivable = examConduction + invigilation + paperSetting + assessment;
     grandTotal += receivable;
 
@@ -482,7 +488,7 @@ function courseLabel(row) {
 function teachingAmount(row) {
   return (
     Number(row.paperSets || 0) * paperRateForRow(row) +
-    Number(row.assessments || 0) * assessmentRateForRow(row)
+    assessmentAmountForRow(row)
   );
 }
 

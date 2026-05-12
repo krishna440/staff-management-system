@@ -1,6 +1,25 @@
 const Staff = require("../models/staff");
 const Chargesheet = require("../models/chargesheet");
 
+function assessmentAmountForEntry(entry) {
+  const assessments = Number(entry.assessments) || 0;
+  const amount = assessments * (Number(entry.assessmentRate) || 0);
+  if (assessments > 0 && entry.examType === "Re-ESE") {
+    return Math.max(amount, 200);
+  }
+  return amount;
+}
+
+function totalAmountForEntry(entry) {
+  return (
+    (Number(entry.paperSets) || 0) * (Number(entry.paperSetRate) || 0) +
+    assessmentAmountForEntry(entry) +
+    (Number(entry.examConduction) || 0) +
+    (Number(entry.invigilation) || 0) +
+    (Number(entry.dutyDays) || 0) * (Number(entry.dutyRate) || 0)
+  );
+}
+
 exports.generateReport = async (req, res) => {
   try {
     const { month } = req.query;
@@ -32,13 +51,14 @@ exports.generateReport = async (req, res) => {
 
     chargesheets.forEach((cs) => {
       const type = staffTypeById.get(cs.staffId?.toString()) || cs.designation;
+      const total = totalAmountForEntry(cs);
 
       if (type === "teaching") {
-        teachingTotal += cs.total || 0;
+        teachingTotal += total;
         papersSet += Number(cs.paperSets || 0);
         assessmentCount += Number(cs.assessments || 0);
       } else {
-        nonTeachingTotal += cs.total || 0;
+        nonTeachingTotal += total;
       }
     });
 
@@ -77,7 +97,7 @@ exports.generateReport = async (req, res) => {
           Number(cs.assessments || 0) +
           (Number(cs.examConduction || 0) > 0 ? 1 : 0) +
           (Number(cs.invigilation || 0) > 0 ? 1 : 0),
-        total: cs.total || 0,
+        total: totalAmountForEntry(cs),
         status: cs.status || "Pending",
       })),
     });
