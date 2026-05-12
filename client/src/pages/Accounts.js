@@ -30,7 +30,7 @@ const downloadPDF = async (c) => {
 };
 
   const fetchApproved = async () => {
-  const res = await axios.get("http://localhost:5000/api/chargesheet");
+  const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/chargesheet");
 
   const filtered = res.data.filter(
     (c) => c.status === "Approved_by_HOD"
@@ -80,7 +80,7 @@ const downloadPDF = async (c) => {
         <button
           onClick={async () => {
             await axios.put(
-              `http://localhost:5000/api/chargesheet/status/${c._id}`,
+              `https://staff-management-system-eluv.onrender.com/api/chargesheet/status/${c._id}`,
               {
                 status: "Final_Approved",
                 rate: c.rate || 0,

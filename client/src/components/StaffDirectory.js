@@ -98,7 +98,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
     try {
       setLoading(true);
       setError(null);
-      const res = await axios.get("http://localhost:5000/api/staff");
+      const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/staff");
       setStaff(
         (res.data || []).filter(
           (s) => String(s.type || "").toLowerCase() === type.toLowerCase()
@@ -168,7 +168,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
     }
     try {
       setSaving(true);
-      await axios.put(`http://localhost:5000/api/staff/${editing._id}`, { ...editForm, type });
+      await axios.put(`https://staff-management-system-eluv.onrender.com/api/staff/${editing._id}`, { ...editForm, type });
       closeEdit();
       await fetchStaff();
     } catch {
@@ -181,7 +181,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
   const deleteMember = async (member) => {
     if (!window.confirm(`Delete ${member.name} from ${title}?`)) return;
     try {
-      await axios.delete(`http://localhost:5000/api/staff/${member._id}`);
+      await axios.delete(`https://staff-management-system-eluv.onrender.com/api/staff/${member._id}`);
       await fetchStaff();
     } catch {
       setError("Failed to delete staff member.");

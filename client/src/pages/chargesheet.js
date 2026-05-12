@@ -342,7 +342,7 @@ const Chargesheet = () => {
   const fetchStaff = async () => {
     try {
       setLoadingStaff(true);
-      const res = await axios.get("http://localhost:5000/api/staff");
+      const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/staff");
       setStaff(res.data);
     } catch {
       setError("Failed to load staff list.");
@@ -457,7 +457,7 @@ const Chargesheet = () => {
     try {
       setSaving(true);
       setError("");
-      await axios.post("http://localhost:5000/api/chargesheet", {
+      await axios.post("https://staff-management-system-eluv.onrender.com/api/chargesheet", {
         ...form,
         dutyDates: dutyDatesJoined,
         dutyDays: dutyDaysFromCalendar,

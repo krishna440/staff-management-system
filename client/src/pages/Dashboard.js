@@ -39,7 +39,7 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
       const res = await axios.get(
-        `http://localhost:5000/api/report?month=${encodeURIComponent(selectedMonth)}`
+        `https://staff-management-system-eluv.onrender.com/api/report?month=${encodeURIComponent(selectedMonth)}`
       );
       setData(res.data);
     } catch (err) {
@@ -53,7 +53,7 @@ const Dashboard = () => {
   const fetchChargesheets = async () => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/chargesheet?month=${encodeURIComponent(selectedMonth)}`
+        `https://staff-management-system-eluv.onrender.com/api/chargesheet?month=${encodeURIComponent(selectedMonth)}`
       );
       setChargesheets(res.data);
     } catch (err) {
@@ -63,7 +63,7 @@ const Dashboard = () => {
 
   const generateExamWorkbook = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/chargesheet");
+      const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/chargesheet");
       await downloadExamWorkbook(res.data);
     } catch (err) {
       console.error(err);
@@ -144,7 +144,7 @@ const Dashboard = () => {
     try {
       setEntrySaving(true);
       await axios.put(
-        `http://localhost:5000/api/chargesheet/${editingEntry._id}`,
+        `https://staff-management-system-eluv.onrender.com/api/chargesheet/${editingEntry._id}`,
         editForm
       );
       setEditingEntry(null);
@@ -163,7 +163,7 @@ const Dashboard = () => {
     if (!ok) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/chargesheet/${entry._id}`);
+      await axios.delete(`https://staff-management-system-eluv.onrender.com/api/chargesheet/${entry._id}`);
       await refreshEntryData();
     } catch (err) {
       console.error(err);
@@ -828,7 +828,7 @@ const Dashboard = () => {
               <button
                 onClick={async () => {
                   try {
-                    await axios.post("http://localhost:5000/api/month/approve", {
+                    await axios.post("https://staff-management-system-eluv.onrender.com/api/month/approve", {
                       month: selectedMonth,
                       approvedBy: user?.user?.name || user?.name,
                     });
@@ -1096,7 +1096,7 @@ const Dashboard = () => {
                                   <button
                                     onClick={async () => {
                                       await axios.put(
-                                        `http://localhost:5000/api/chargesheet/status/${c._id}`,
+                                        `https://staff-management-system-eluv.onrender.com/api/chargesheet/status/${c._id}`,
                                         { status: "Approved_by_HOD" }
                                       );
                                       refreshEntryData();

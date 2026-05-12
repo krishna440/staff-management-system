@@ -75,7 +75,7 @@ export default function Timetable() {
 
   const fetchStaff = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/staff");
+      const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/staff");
       setStaff(res.data || []);
     } catch (err) { console.error(err); }
   };
