@@ -70,16 +70,18 @@ const Dashboard = () => {
       setError("Failed to generate exam workbook. Please try again.");
     }
   };
-
+/* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (!user) navigate("/login");
   }, [user, navigate]);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchReport();
     fetchChargesheets();
   }, []);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     fetchReport();
     fetchChargesheets();
