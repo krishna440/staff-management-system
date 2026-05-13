@@ -22,11 +22,11 @@ export default function ChangePassword() {
       setLoading("otp");
       setError("");
       setMessage("");
-      await axios.post(`${API_BASE}/auth/request-password-otp`, { email });
+      await axios.post(`${API_BASE}/auth/request-password-otp`, { email }, { timeout: 22000 });
       setOtpSent(true);
       setMessage("OTP sent to your registered email.");
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to send OTP");
+      setError(err.response?.data?.message || "Email server took too long. Please check SMTP settings and try again.");
     } finally {
       setLoading("");
     }

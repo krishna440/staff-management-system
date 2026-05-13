@@ -84,6 +84,9 @@ async function sendOtpEmail(email, otp) {
     host: SMTP_HOST,
     port: Number(SMTP_PORT),
     secure: Number(SMTP_PORT) === 465,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
@@ -142,7 +145,18 @@ router.post("/request-password-otp", async (req, res) => {
     user.passwordResetOtpVerified = false;
     await user.save();
 
-    await sendOtpEmail(email, otp);
+    try {
+      await sendOtpEmail(email, otp);
+    } catch (mailErr) {
+      user.passwordResetOtpHash = undefined;
+      user.passwordResetOtpExpiresAt = undefined;
+      user.passwordResetOtpVerified = false;
+      await user.save();
+      console.log("OTP email failed:", mailErr);
+      return res.status(502).json({
+        message: "Email server timeout. Try SMTP port 465 or check SMTP settings.",
+      });
+    }
 
     res.json({ message: "OTP sent to your email" });
   } catch (err) {
