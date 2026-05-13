@@ -148,11 +148,20 @@ export default function Timetable() {
     );
   };
 
-  const updateLabSlotCell = (rowId, slotId, value) => {
+  const updateLabSlotCell = (rowId, slotId, field, value) => {
     setLabRows((prev) =>
       prev.map((row) =>
         row.id === rowId
-          ? { ...row, slots: { ...(row.slots || {}), [slotId]: value } }
+          ? {
+              ...row,
+              slots: {
+                ...(row.slots || {}),
+                [slotId]: {
+                  ...normalizeLabSlotValue(row.slots?.[slotId]),
+                  [field]: value,
+                },
+              },
+            }
           : row
       )
     );
@@ -348,7 +357,7 @@ export default function Timetable() {
 
   const completionStats = useMemo(() => {
     const filledTheory = theoryRows.filter((r) => r.date && r.courseCode).length;
-    const filledLab = labRows.filter((r) => labDateLabel(r) && labSlots.some((slot) => r.slots?.[slot.id])).length;
+    const filledLab = labRows.filter((r) => labDateLabel(r) && labSlots.some((slot) => labSlotText(r.slots?.[slot.id]))).length;
     return { theoryTotal: theoryRows.length, theoryFilled: filledTheory, labTotal: labRows.length, labFilled: filledLab };
   }, [theoryRows, labRows, labSlots]);
 
@@ -594,19 +603,26 @@ export default function Timetable() {
                         </td>
                         {labSlots.map((slot) => (
                           <td key={slot.id}>
-                            <select
-                              value={row.slots?.[slot.id] || ""}
-                              onChange={(e) => updateLabSlotCell(row.id, slot.id, e.target.value)}
-                            >
-                              <option value="">Select lab subject</option>
-                              {row.slots?.[slot.id] && !labCourses.some((course) => formatCourse(course) === row.slots?.[slot.id]) && (
-                                <option value={row.slots[slot.id]}>{row.slots[slot.id]}</option>
-                              )}
-                              {labCourses.map((course) => {
-                                const label = formatCourse(course);
-                                return <option key={course.code} value={label}>{label}</option>;
-                              })}
-                            </select>
+                            <div className="tt-lab-slot-cell">
+                              <select
+                                value={normalizeLabSlotValue(row.slots?.[slot.id]).subject}
+                                onChange={(e) => updateLabSlotCell(row.id, slot.id, "subject", e.target.value)}
+                              >
+                                <option value="">Select lab subject</option>
+                                {legacyLabSlotSubject(row.slots?.[slot.id]) && !labCourses.some((course) => formatCourse(course) === legacyLabSlotSubject(row.slots?.[slot.id])) && (
+                                  <option value={legacyLabSlotSubject(row.slots?.[slot.id])}>{legacyLabSlotSubject(row.slots?.[slot.id])}</option>
+                                )}
+                                {labCourses.map((course) => {
+                                  const label = formatCourse(course);
+                                  return <option key={course.code} value={label}>{label}</option>;
+                                })}
+                              </select>
+                              <input
+                                value={normalizeLabSlotValue(row.slots?.[slot.id]).rollNo}
+                                onChange={(e) => updateLabSlotCell(row.id, slot.id, "rollNo", e.target.value)}
+                                placeholder="Roll No (1-10)"
+                              />
+                            </div>
                           </td>
                         ))}
                         <td>
@@ -690,7 +706,7 @@ export default function Timetable() {
                   {(previewTimetable.labRows || []).slice(0, 4).map((row) => (
                     <div key={row.id} className="tt-preview-lab-row">
                       <strong>{labDateLabel(row) || "Lab row"}</strong>
-                      <span>{(previewTimetable.labSlots || []).map((slot) => row.slots?.[slot.id]).filter(Boolean).join(" | ") || "No lab slots filled"}</span>
+                      <span>{(previewTimetable.labSlots || []).map((slot) => labSlotText(row.slots?.[slot.id])).filter(Boolean).join(" | ") || "No lab slots filled"}</span>
                     </div>
                   ))}
                 </div>
@@ -847,7 +863,7 @@ function labTableBody(rows, slots) {
     const currentDate = labDateLabel(row);
     const previousDate = idx > 0 ? labDateLabel(rows[idx - 1]) : "";
     const isFirstInGroup = currentDate !== previousDate;
-    const slotCells = slots.map((slot) => row.slots?.[slot.id] || "");
+    const slotCells = slots.map((slot) => labSlotText(row.slots?.[slot.id]));
 
     if (!isFirstInGroup) return slotCells;
 
@@ -876,6 +892,21 @@ function labColumnStyles(slotCount) {
       : { cellWidth: slotWidth };
     return styles;
   }, {});
+}
+function normalizeLabSlotValue(value) {
+  if (!value) return { subject: "", rollNo: "" };
+  if (typeof value === "string") return { subject: value, rollNo: "" };
+  return {
+    subject: value.subject || "",
+    rollNo: value.rollNo || "",
+  };
+}
+function legacyLabSlotSubject(value) {
+  return normalizeLabSlotValue(value).subject;
+}
+function labSlotText(value) {
+  const slot = normalizeLabSlotValue(value);
+  return [slot.subject, slot.rollNo].filter(Boolean).join("\n");
 }
 function slotColor(idx) {
   const colors = [
@@ -1233,6 +1264,11 @@ const css = `
   }
   .tt-lab-date-cell textarea {
     min-height: 54px;
+  }
+  .tt-lab-slot-cell {
+    display: grid;
+    gap: 8px;
+    min-width: 220px;
   }
 
   /* Ã¢â€â‚¬Ã¢â€â‚¬ ROW NUMBER Ã¢â€â‚¬Ã¢â€â‚¬ */

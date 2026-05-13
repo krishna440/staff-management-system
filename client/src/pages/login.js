@@ -24,7 +24,7 @@ const Login = () => {
       });
       localStorage.removeItem("user");
       sessionStorage.setItem("user", JSON.stringify(res.data));
-      navigate("/");
+      navigate(res.data?.user?.mustChangePassword ? "/change-password" : "/");
     } catch (err) {
   setError(err.response?.data?.message || "Login failed");
 } finally {

@@ -1,31 +1,213 @@
 const express = require("express");
-const router = express.Router();
+const bcrypt = require("bcryptjs");
 const User = require("../models/user");
+
+const router = express.Router();
+
+const DEFAULT_PASSWORD = "123";
+const OTP_TTL_MINUTES = 10;
+const ALLOWED_USERS = [
+  { email: "apai@mc.vjti.ac.in", name: "HOD", role: "hod" },
+  { email: "sajankar@mc.vjti.ac.in", name: "Exam Committee", role: "exam_committee" },
+  { email: "bppawar@mc.vjti.ac.in", name: "Admin", role: "admin" },
+];
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function isAllowedEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  return ALLOWED_USERS.some((account) => account.email === normalizedEmail);
+}
+
+function publicUser(user) {
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    mustChangePassword: user.mustChangePassword,
+  };
+}
+
+async function ensureAllowedUsers() {
+  const defaultPasswordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+  await Promise.all(ALLOWED_USERS.map(async (account) => {
+    const existing = await User.findOne({ email: account.email });
+
+    if (!existing) {
+      await User.create({
+        ...account,
+        password: defaultPasswordHash,
+        mustChangePassword: true,
+      });
+      return;
+    }
+
+    const updates = {
+      name: account.name,
+      role: account.role,
+    };
+
+    if (existing.mustChangePassword !== false || !existing.password || !existing.password.startsWith("$2")) {
+      updates.password = defaultPasswordHash;
+      updates.mustChangePassword = true;
+    }
+
+    await User.updateOne({ _id: existing._id }, { $set: updates });
+  }));
+}
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function sendOtpEmail(email, otp) {
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
+
+  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+    console.log(`Password change OTP for ${email}: ${otp}`);
+    return;
+  }
+
+  let nodemailer;
+  try {
+    nodemailer = require("nodemailer");
+  } catch {
+    console.log(`Install nodemailer to send email. Password change OTP for ${email}: ${otp}`);
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT),
+    secure: Number(SMTP_PORT) === 465,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+
+  await transporter.sendMail({
+    from: SMTP_FROM || SMTP_USER,
+    to: email,
+    subject: "VJTI MCA Portal password change OTP",
+    text: `Your OTP for changing your VJTI MCA Portal password is ${otp}. It is valid for ${OTP_TTL_MINUTES} minutes.`,
+  });
+}
 
 router.post("/login", async (req, res) => {
   try {
-    console.log("LOGIN BODY:", req.body); // 🔥 DEBUG
+    const email = normalizeEmail(req.body.email);
+    const password = String(req.body.password || "");
 
-    const { email, password } = req.body;
+    if (!isAllowedEmail(email)) {
+      return res.status(401).json({ message: "This email is not authorized for login" });
+    }
 
-    const user = await User.findOne({ email, password });
+    await ensureAllowedUsers();
 
-    console.log("USER FOUND:", user); // 🔥 DEBUG
+    const user = await User.findOne({ email });
+    const passwordMatches = user && await bcrypt.compare(password, user.password || "");
 
-    if (!user) {
+    if (!passwordMatches) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        role: user.role,
-      },
-    });
+    res.json({ user: publicUser(user) });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/request-password-otp", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+
+    if (!isAllowedEmail(email)) {
+      return res.status(401).json({ message: "This email is not authorized" });
+    }
+
+    await ensureAllowedUsers();
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOtp();
+    user.passwordResetOtpHash = await bcrypt.hash(otp, 10);
+    user.passwordResetOtpExpiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+    user.passwordResetOtpVerified = false;
+    await user.save();
+
+    await sendOtpEmail(email, otp);
+
+    res.json({ message: "OTP sent to your email" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Unable to send OTP" });
+  }
+});
+
+router.post("/verify-password-otp", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const otp = String(req.body.otp || "");
+    const user = await User.findOne({ email });
+
+    if (!user || !user.passwordResetOtpHash || !user.passwordResetOtpExpiresAt) {
+      return res.status(400).json({ message: "Please request an OTP first" });
+    }
+
+    if (user.passwordResetOtpExpiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP expired. Please request a new OTP" });
+    }
+
+    const matches = await bcrypt.compare(otp, user.passwordResetOtpHash);
+    if (!matches) return res.status(400).json({ message: "Invalid OTP" });
+
+    user.passwordResetOtpVerified = true;
+    await user.save();
+
+    res.json({ message: "OTP verified" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Unable to verify OTP" });
+  }
+});
+
+router.post("/change-password", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const newPassword = String(req.body.newPassword || "");
+    const user = await User.findOne({ email });
+
+    if (!user || !user.passwordResetOtpVerified || !user.passwordResetOtpExpiresAt) {
+      return res.status(400).json({ message: "Verify OTP before changing password" });
+    }
+
+    if (user.passwordResetOtpExpiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP expired. Please request a new OTP" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.mustChangePassword = false;
+    user.passwordChangedAt = new Date();
+    user.passwordResetOtpHash = undefined;
+    user.passwordResetOtpExpiresAt = undefined;
+    user.passwordResetOtpVerified = false;
+    await user.save();
+
+    res.json({ user: publicUser(user), message: "Password changed successfully" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Unable to change password" });
   }
 });
 

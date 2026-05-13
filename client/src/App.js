@@ -9,6 +9,7 @@ import Teaching from "./pages/Teaching";
 import NonTeaching from "./pages/NonTeaching";
 import Accounts from "./pages/Accounts";
 import TaskRates from "./pages/TaskRates";
+import ChangePassword from "./pages/ChangePassword";
 
 const getStoredUser = () => {
   try {
@@ -27,8 +28,16 @@ const PrivateRoute = ({ children }) => {
   return getStoredUser() ? children : <Navigate to="/login" replace />;
 };
 
+const PasswordReadyRoute = ({ children }) => {
+  const storedUser = getStoredUser();
+  if (!storedUser) return <Navigate to="/login" replace />;
+  return storedUser.user?.mustChangePassword ? <Navigate to="/change-password" replace /> : children;
+};
+
 const RoleRoute = ({ roles, children }) => {
-  if (!getStoredUser()) return <Navigate to="/login" replace />;
+  const storedUser = getStoredUser();
+  if (!storedUser) return <Navigate to="/login" replace />;
+  if (storedUser.user?.mustChangePassword) return <Navigate to="/change-password" replace />;
   return roles.includes(getUserRole()) ? children : <Navigate to="/" replace />;
 };
 
@@ -40,41 +49,49 @@ function App() {
 
         {/* ðŸ”“ Public */}
         <Route path="/login" element={<Login />} />
+        <Route
+          path="/change-password"
+          element={
+            <PrivateRoute>
+              <ChangePassword />
+            </PrivateRoute>
+          }
+        />
 
         {/* ðŸ”’ Protected Routes */}
         <Route
           path="/"
           element={
-            <PrivateRoute>
+            <PasswordReadyRoute>
               <Dashboard />
-            </PrivateRoute>
+            </PasswordReadyRoute>
           }
         />
 
         <Route
           path="/add-staff"
           element={
-            <PrivateRoute>
+            <PasswordReadyRoute>
               <AddStaff />
-            </PrivateRoute>
+            </PasswordReadyRoute>
           }
         />
 
         <Route
           path="/chargesheet"
           element={
-            <PrivateRoute>
+            <PasswordReadyRoute>
               <Chargesheet />
-            </PrivateRoute>
+            </PasswordReadyRoute>
           }
         />
 
         <Route
           path="/timetable"
           element={
-            <PrivateRoute>
+            <PasswordReadyRoute>
               <Timetable />
-            </PrivateRoute>
+            </PasswordReadyRoute>
           }
         />
 
@@ -82,18 +99,18 @@ function App() {
         <Route
           path="/teaching"
           element={
-            <PrivateRoute>
+            <PasswordReadyRoute>
               <Teaching />
-            </PrivateRoute>
+            </PasswordReadyRoute>
           }
         />
 
         <Route
           path="/non-teaching"
           element={
-            <PrivateRoute>
+            <PasswordReadyRoute>
               <NonTeaching />
-            </PrivateRoute>
+            </PasswordReadyRoute>
           }
         />
 <Route
