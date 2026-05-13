@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getCoursesForSemester, SEMESTERS } from "../utils/courseCatalog";
+import { formatCourse, getCoursesForSemester, SEMESTERS } from "../utils/courseCatalog";
 import { addVjtiLogoToPdf } from "../utils/logo";
 
 const EXAM_TYPES = [
@@ -74,6 +74,11 @@ export default function Timetable() {
     [settings.semester]
   );
 
+  const labCourses = useMemo(
+    () => courses.filter((course) => course.kind === "lab"),
+    [courses]
+  );
+
   const teachingStaff = useMemo(
     () => staff.filter((s) => String(s.type || "").toLowerCase() === "teaching"),
     [staff]
@@ -97,6 +102,7 @@ export default function Timetable() {
     setSettings((prev) => ({ ...prev, [field]: value }));
     if (field === "semester") {
       setTheoryRows((prev) => prev.map((row) => ({ ...row, courseCode: "", courseTitle: "" })));
+      setLabRows((prev) => prev.map((row) => ({ ...row, slots: {} })));
     }
   };
 
@@ -588,11 +594,19 @@ export default function Timetable() {
                         </td>
                         {labSlots.map((slot) => (
                           <td key={slot.id}>
-                            <textarea
+                            <select
                               value={row.slots?.[slot.id] || ""}
                               onChange={(e) => updateLabSlotCell(row.id, slot.id, e.target.value)}
-                              placeholder="R5MC5021P Data Mining Lab&#10;(Roll No 1-9)"
-                            />
+                            >
+                              <option value="">Select lab subject</option>
+                              {row.slots?.[slot.id] && !labCourses.some((course) => formatCourse(course) === row.slots?.[slot.id]) && (
+                                <option value={row.slots[slot.id]}>{row.slots[slot.id]}</option>
+                              )}
+                              {labCourses.map((course) => {
+                                const label = formatCourse(course);
+                                return <option key={course.code} value={label}>{label}</option>;
+                              })}
+                            </select>
                           </td>
                         ))}
                         <td>

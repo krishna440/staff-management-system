@@ -283,7 +283,7 @@ const Login = () => {
             <div className="left-logo">
               <div className="left-logo-img">
                 <img
-                  src="https://vjti.ac.in/wp-content/uploads/2024/05/logo-light.gif"
+                  src="/vjtiLogo.png"
                   alt="VJTI logo"
                 />
               </div>

@@ -768,7 +768,7 @@ const Dashboard = () => {
         <div className="sidebar">
           <div className="logo-section">
             <div className="logo-img-wrap">
-              <img src="https://vjti.ac.in/wp-content/uploads/2024/05/logo-light.gif" alt="VJTI" />
+              <img src="/vjtiLogo.png" alt="VJTI" />
             </div>
             <div className="logo-text">
               <h3>VJTI</h3>
