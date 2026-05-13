@@ -9,7 +9,7 @@ const OTP_TTL_MINUTES = 10;
 const ALLOWED_USERS = [
   { email: "apai@mc.vjti.ac.in", name: "HOD", role: "hod" },
   { email: "sajankar@mc.vjti.ac.in", name: "Exam Committee", role: "exam_committee" },
-  { email: "bppawar_mc24@mc.vjti.ac.in", name: "Admin", role: "admin" },
+  { email: "pawarbhupendra189@gmail.com", name: "Admin", role: "admin" },
 ];
 
 function normalizeEmail(email) {
