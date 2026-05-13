@@ -65,6 +65,11 @@ function generateOtp() {
 }
 
 async function sendOtpEmail(email, otp) {
+  if (process.env.BREVO_API_KEY) {
+    await sendOtpWithBrevo(email, otp);
+    return;
+  }
+
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
 
   if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
@@ -99,6 +104,47 @@ async function sendOtpEmail(email, otp) {
     subject: "VJTI MCA Portal password change OTP",
     text: `Your OTP for changing your VJTI MCA Portal password is ${otp}. It is valid for ${OTP_TTL_MINUTES} minutes.`,
   });
+}
+
+async function sendOtpWithBrevo(email, otp) {
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER;
+  const senderName = process.env.BREVO_SENDER_NAME || "VJTI MCA Portal";
+
+  if (!senderEmail) {
+    throw new Error("Set BREVO_SENDER_EMAIL to a verified Brevo sender email");
+  }
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      "api-key": process.env.BREVO_API_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      sender: {
+        name: senderName,
+        email: senderEmail,
+      },
+      to: [{ email }],
+      subject: "VJTI MCA Portal password change OTP",
+      textContent: `Your OTP for changing your VJTI MCA Portal password is ${otp}. It is valid for ${OTP_TTL_MINUTES} minutes.`,
+      htmlContent: `
+        <html>
+          <body>
+            <p>Your OTP for changing your VJTI MCA Portal password is:</p>
+            <h2>${otp}</h2>
+            <p>This OTP is valid for ${OTP_TTL_MINUTES} minutes.</p>
+          </body>
+        </html>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Brevo email failed (${response.status}): ${errorBody}`);
+  }
 }
 
 router.post("/login", async (req, res) => {
@@ -153,9 +199,7 @@ router.post("/request-password-otp", async (req, res) => {
       user.passwordResetOtpVerified = false;
       await user.save();
       console.log("OTP email failed:", mailErr);
-      return res.status(502).json({
-        message: "Email server timeout. Try SMTP port 465 or check SMTP settings.",
-      });
+      return res.status(502).json({ message: "Unable to send OTP email. Check Brevo API settings." });
     }
 
     res.json({ message: "OTP sent to your email" });
