@@ -17,7 +17,7 @@ const Toast = ({ message, type, onDone }) => {
   useEffect(() => {
     const t = setTimeout(onDone, 2600);
     return () => clearTimeout(t);
-  }, [message]);
+  }, [message, onDone]);
   if (!message) return null;
   return (
     <div style={{
