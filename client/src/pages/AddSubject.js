@@ -18,7 +18,15 @@ const AddSubject = () => {
   const [form, setForm] = useState(emptyForm);
   const [editing, setEditing] = useState(null);
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
   const semesters = useMemo(() => Object.keys(catalog), [catalog]);
+  const visibleCourses = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return (catalog[form.semester] || []).filter((course) => {
+      if (!term) return true;
+      return `${course.code} ${course.title} ${course.kind === "lab" ? "lab" : "theory"}`.toLowerCase().includes(term);
+    });
+  }, [catalog, form.semester, search]);
 
   const updateForm = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -103,6 +111,7 @@ const AddSubject = () => {
         .as-card-head { padding: 16px 18px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
         .as-card-head h2 { margin: 0; font-size: 16px; font-weight: 800; }
         .as-card-body { padding: 18px; }
+        .as-list-tools { display: grid; grid-template-columns: 180px minmax(220px, 1fr); gap: 12px; align-items: end; padding: 16px 18px; border-bottom: 1px solid #e2e8f0; background: #fbfdff; }
         .as-form { display: grid; grid-template-columns: 150px minmax(140px, 1fr) minmax(240px, 2fr) 140px auto; gap: 12px; align-items: end; }
         .as-field { display: flex; flex-direction: column; gap: 6px; }
         .as-field label { font-size: 12px; font-weight: 800; color: #475569; }
@@ -126,8 +135,10 @@ const AddSubject = () => {
         .as-row-actions { display: flex; gap: 8px; justify-content: flex-end; }
         .as-link-btn { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; padding: 7px 10px; font-weight: 800; cursor: pointer; font-size: 12px; }
         .as-link-btn.danger { color: #b91c1c; border-color: #fecaca; }
+        .as-empty { color: #64748b; font-size: 13px; font-weight: 700; text-align: center; padding: 18px 8px; }
         @media (max-width: 820px) {
           .as-top { align-items: flex-start; flex-direction: column; }
+          .as-list-tools,
           .as-form { grid-template-columns: 1fr; }
           .as-actions { justify-content: flex-start; }
           .as-table { display: block; overflow-x: auto; white-space: nowrap; }
@@ -181,41 +192,61 @@ const AddSubject = () => {
 
         <div className="as-card">
           <div className="as-card-head">
-            <h2>All Subjects</h2>
+            <h2>Subjects</h2>
           </div>
-          {semesters.map((semester) => (
-            <div key={semester} className="as-semester">
-              <div className="as-semester-title">
-                <h3>{semester}</h3>
-                <span className="as-count">{(catalog[semester] || []).length} subjects</span>
-              </div>
-              <table className="as-table">
-                <thead>
-                  <tr>
-                    <th>Course Code</th>
-                    <th>Subject Name</th>
-                    <th>Type</th>
-                    <th style={{ textAlign: "right" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(catalog[semester] || []).map((course) => (
-                    <tr key={`${semester}-${course.code}`}>
-                      <td className="as-code">{course.code}</td>
-                      <td>{course.title}</td>
-                      <td><span className="as-type">{course.kind === "lab" ? "Lab" : "Theory"}</span></td>
-                      <td>
-                        <div className="as-row-actions">
-                          <button className="as-link-btn" onClick={() => editSubject(semester, course)}>Edit</button>
-                          <button className="as-link-btn danger" onClick={() => deleteSubject(semester, course)}>Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="as-list-tools">
+            <div className="as-field">
+              <label>Show semester</label>
+              <select className="as-select" value={form.semester} onChange={(e) => updateForm("semester", e.target.value)}>
+                {semesters.map((sem) => <option key={sem} value={sem}>{sem}</option>)}
+              </select>
             </div>
-          ))}
+            <div className="as-field">
+              <label>Search subject</label>
+              <input
+                className="as-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by code, name, theory, or lab"
+              />
+            </div>
+          </div>
+          <div className="as-semester">
+            <div className="as-semester-title">
+              <h3>{form.semester}</h3>
+              <span className="as-count">{visibleCourses.length} of {(catalog[form.semester] || []).length} subjects</span>
+            </div>
+            <table className="as-table">
+              <thead>
+                <tr>
+                  <th>Course Code</th>
+                  <th>Subject Name</th>
+                  <th>Type</th>
+                  <th style={{ textAlign: "right" }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleCourses.map((course) => (
+                  <tr key={`${form.semester}-${course.code}`}>
+                    <td className="as-code">{course.code}</td>
+                    <td>{course.title}</td>
+                    <td><span className="as-type">{course.kind === "lab" ? "Lab" : "Theory"}</span></td>
+                    <td>
+                      <div className="as-row-actions">
+                        <button className="as-link-btn" onClick={() => editSubject(form.semester, course)}>Edit</button>
+                        <button className="as-link-btn danger" onClick={() => deleteSubject(form.semester, course)}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {visibleCourses.length === 0 && (
+                  <tr>
+                    <td className="as-empty" colSpan="4">No subjects found for this semester.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

@@ -252,53 +252,12 @@ function buildSupportSheet(exam, allRows) {
   });
 
   let sr = 1;
-  supportRows.forEach((row) => {
-    const supportItems = [];
-    const calculatedDuty = dutyAmount(row);
-    const standaloneMovedToConduction =
-      !hasTeachingExamWork(row) &&
-      Number(row.examConduction || 0) === 0 &&
-      Number(row.invigilation || 0) >= 1000;
-    const conduction = Number(row.examConduction || 0) + (standaloneMovedToConduction ? Number(row.invigilation || 0) : 0);
-    const invigilation = standaloneMovedToConduction ? 0 : Number(row.invigilation || 0);
+  let writtenItems = 0;
+  const grouped = groupBy(supportRows, (row) => row.staffName || "Unknown");
 
-    if (calculatedDuty > 0 || row.dutyRole || row.dutyDates) {
-      supportItems.push({
-        name: `${isConductionDuty(row) ? "Exam Conduction" : row.dutyRole || "Exam Duty"} - ${row.staffName || ""}`,
-        rate: Number(row.dutyRate || 0),
-        dates: row.dutyDates || row.examPeriod || exam.period,
-        days: Number(row.dutyDays || 0),
-        amount: calculatedDuty,
-      });
-    }
-    if (conduction > 0) {
-      supportItems.push({
-        name: `Exam Conduction - ${row.staffName || ""}`,
-        rate: conduction,
-        dates: row.examPeriod || exam.period,
-        days: 1,
-        amount: conduction,
-      });
-    }
-    if (invigilation > 0) {
-      supportItems.push({
-        name: `Invigilation / Reliever - ${row.staffName || ""}`,
-        rate: invigilation,
-        dates: row.examPeriod || exam.period,
-        days: 1,
-        amount: invigilation,
-      });
-    }
-    if (supportItems.length === 0 && Number(row.total || 0) > 0) {
-      supportItems.push({
-        name: row.staffName || "",
-        rate: Number(row.total || 0),
-        dates: row.examPeriod || exam.period,
-        days: 1,
-        amount: Number(row.total || 0),
-      });
-    }
-
+  grouped.forEach((staffRows) => {
+    const supportItems = staffRows.flatMap((row) => supportItemsForRow(row, exam));
+    if (supportItems.length === 0) return;
     const startRow = rows.length + 1;
     const grandTotal = sum(supportItems, (item) => item.amount);
 
@@ -316,6 +275,7 @@ function buildSupportSheet(exam, allRows) {
         height: 30,
       });
       sr += 1;
+      writtenItems += 1;
     });
 
     if (supportItems.length > 1) {
@@ -323,7 +283,7 @@ function buildSupportSheet(exam, allRows) {
     }
   });
 
-  if (supportRows.length === 0) {
+  if (writtenItems === 0) {
     rows.push(blankTableRow(7, "No teaching/non-teaching support entries for this exam."));
     merges.push(`A${rows.length}:G${rows.length}`);
   }
@@ -420,15 +380,16 @@ function buildTotalSheet(exam, allRows) {
     height: 26,
   });
   rows.push({ cells: emptyCells(7), height: 18 });
+  const wordsRow = rows.length + 1;
   rows.push({
     cells: [
       { value: "Amount in word ( Total ) -", style: STYLE.label },
-      ...emptyCells(2),
-      { value: grandTotal, style: STYLE.label },
-      ...emptyCells(3),
+      { value: amountInWords(grandTotal), style: STYLE.label },
+      ...emptyCells(5),
     ],
     height: 28,
   });
+  merges.push(`B${wordsRow}:G${wordsRow}`);
   rows.push({ cells: emptyCells(7), height: 34 });
   rows.push({
     cells: [
@@ -446,6 +407,44 @@ function buildTotalSheet(exam, allRows) {
     ],
     height: 34,
   });
+  rows.push({ cells: emptyCells(7), height: 18 });
+  rows.push({
+    cells: [
+      { value: "Forwarded through", style: STYLE.text },
+      ...emptyCells(6),
+    ],
+    height: 28,
+  });
+  rows.push({ cells: emptyCells(7), height: 18 });
+  rows.push({
+    cells: [
+      { value: "Sign of Dean Academic", style: STYLE.text },
+      ...emptyCells(6),
+    ],
+    height: 34,
+  });
+  rows.push({ cells: emptyCells(7), height: 18 });
+  rows.push({
+    cells: [
+      { value: "Forwarded to,", style: STYLE.text },
+      ...emptyCells(6),
+    ],
+    height: 22,
+  });
+  rows.push({
+    cells: [
+      { value: "The Director", style: STYLE.text },
+      ...emptyCells(6),
+    ],
+    height: 22,
+  });
+  rows.push({
+    cells: [
+      { value: "For favour of approval", style: STYLE.text },
+      ...emptyCells(6),
+    ],
+    height: 22,
+  });
 
   return {
     name: `${exam.shortName} Total`,
@@ -453,6 +452,55 @@ function buildTotalSheet(exam, allRows) {
     rows,
     merges,
   };
+}
+
+function supportItemsForRow(row, exam) {
+  const supportItems = [];
+  const calculatedDuty = dutyAmount(row);
+  const standaloneMovedToConduction =
+    !hasTeachingExamWork(row) &&
+    Number(row.examConduction || 0) === 0 &&
+    Number(row.invigilation || 0) >= 1000;
+  const conduction = Number(row.examConduction || 0) + (standaloneMovedToConduction ? Number(row.invigilation || 0) : 0);
+  const invigilation = standaloneMovedToConduction ? 0 : Number(row.invigilation || 0);
+
+  if (calculatedDuty > 0 || row.dutyRole || row.dutyDates) {
+    supportItems.push({
+      name: `${isConductionDuty(row) ? "Exam Conduction" : row.dutyRole || "Exam Duty"} - ${row.staffName || ""}`,
+      rate: Number(row.dutyRate || 0),
+      dates: row.dutyDates || row.examPeriod || exam.period,
+      days: Number(row.dutyDays || 0),
+      amount: calculatedDuty,
+    });
+  }
+  if (conduction > 0) {
+    supportItems.push({
+      name: `Exam Conduction - ${row.staffName || ""}`,
+      rate: conduction,
+      dates: row.examPeriod || exam.period,
+      days: 1,
+      amount: conduction,
+    });
+  }
+  if (invigilation > 0) {
+    supportItems.push({
+      name: `Invigilation / Reliever - ${row.staffName || ""}`,
+      rate: invigilation,
+      dates: row.examPeriod || exam.period,
+      days: 1,
+      amount: invigilation,
+    });
+  }
+  if (supportItems.length === 0 && Number(row.total || 0) > 0) {
+    supportItems.push({
+      name: row.staffName || "",
+      rate: Number(row.total || 0),
+      dates: row.examPeriod || exam.period,
+      days: 1,
+      amount: Number(row.total || 0),
+    });
+  }
+  return supportItems;
 }
 
 function commonHeadingRows(exam, columnCount) {
@@ -538,6 +586,64 @@ function dutyAmount(row) {
 
 function isTeaching(row) {
   return String(row.designation || "").toLowerCase() === "teaching";
+}
+
+function amountInWords(amount) {
+  const whole = Math.round(Number(amount || 0));
+  if (whole === 0) return "Rupees Zero Only";
+  return `Rupees ${numberToIndianWords(whole)} Only`;
+}
+
+function numberToIndianWords(value) {
+  const units = [
+    "",
+    "One",
+    "Two",
+    "Three",
+    "Four",
+    "Five",
+    "Six",
+    "Seven",
+    "Eight",
+    "Nine",
+    "Ten",
+    "Eleven",
+    "Twelve",
+    "Thirteen",
+    "Fourteen",
+    "Fifteen",
+    "Sixteen",
+    "Seventeen",
+    "Eighteen",
+    "Nineteen",
+  ];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  const belowHundred = (num) => {
+    if (num < 20) return units[num];
+    return [tens[Math.floor(num / 10)], units[num % 10]].filter(Boolean).join(" ");
+  };
+  const belowThousand = (num) => {
+    const hundred = Math.floor(num / 100);
+    const rest = num % 100;
+    return [
+      hundred ? `${units[hundred]} Hundred` : "",
+      rest ? belowHundred(rest) : "",
+    ].filter(Boolean).join(" ");
+  };
+
+  const parts = [];
+  const crore = Math.floor(value / 10000000);
+  value %= 10000000;
+  const lakh = Math.floor(value / 100000);
+  value %= 100000;
+  const thousand = Math.floor(value / 1000);
+  value %= 1000;
+
+  if (crore) parts.push(`${numberToIndianWords(crore)} Crore`);
+  if (lakh) parts.push(`${belowThousand(lakh)} Lakh`);
+  if (thousand) parts.push(`${belowThousand(thousand)} Thousand`);
+  if (value) parts.push(belowThousand(value));
+  return parts.join(" ");
 }
 
 function groupBy(items, getKey) {
