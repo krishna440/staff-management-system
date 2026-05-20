@@ -180,18 +180,63 @@ function formatDdMmYyyyFromKey(dateKey) {
   ].join(".");
 }
 
+function dateKeyFromDate(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function parseDateText(value) {
+  const match = String(value || "").match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+  if (!match) return null;
+  const [, day, month, year] = match.map(Number);
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
+function parseMonthText(value) {
+  const date = new Date(`1 ${String(value || "").trim()}`);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    start: new Date(date.getFullYear(), date.getMonth(), 1),
+    end: new Date(date.getFullYear(), date.getMonth() + 1, 0),
+  };
+}
+
+function examDateBounds(period, month) {
+  const dateMatches = String(period || "").match(/\d{1,2}[./-]\d{1,2}[./-]\d{4}/g) || [];
+  if (dateMatches.length >= 2) {
+    const start = parseDateText(dateMatches[0]);
+    const end = parseDateText(dateMatches[1]);
+    if (start && end) return start <= end ? { start, end } : { start: end, end: start };
+  }
+  return parseMonthText(period) || parseMonthText(month);
+}
+
 /** Monday-first weekday index (0 = Monday, 6 = Sunday). */
 function mondayWeekdayIndex(dayOfWeekSundayZero) {
   return (dayOfWeekSundayZero + 6) % 7;
 }
 
-function DutyExamCalendar({ value, onChange, accent }) {
+function DutyExamCalendar({ value, onChange, accent, bounds }) {
   const selected = useMemo(() => new Set(value), [value]);
+  const minKey = bounds?.start ? dateKeyFromDate(bounds.start) : "";
+  const maxKey = bounds?.end ? dateKeyFromDate(bounds.end) : "";
+  const startYear = bounds?.start?.getFullYear();
+  const startMonth = bounds?.start?.getMonth();
 
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
+
+  useEffect(() => {
+    if (startYear === undefined || startMonth === undefined) return;
+    setCursor({ year: startYear, month: startMonth });
+  }, [startYear, startMonth]);
 
   const monthMeta = useMemo(() => {
     const first = new Date(cursor.year, cursor.month, 1);
@@ -208,6 +253,7 @@ function DutyExamCalendar({ value, onChange, accent }) {
 
   const toggle = (day) => {
     const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if ((minKey && key < minKey) || (maxKey && key > maxKey)) return;
     const next = new Set(value);
     if (next.has(key)) next.delete(key);
     else next.add(key);
@@ -244,12 +290,14 @@ function DutyExamCalendar({ value, onChange, accent }) {
         {dayCells.map((day) => {
           const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const active = selected.has(key);
+          const blocked = (minKey && key < minKey) || (maxKey && key > maxKey);
           return (
             <button
               key={key}
               type="button"
-              className={`cs-duty-cal-cell cs-duty-cal-day${active ? " is-selected" : ""}`}
+              className={`cs-duty-cal-cell cs-duty-cal-day${active ? " is-selected" : ""}${blocked ? " is-disabled" : ""}`}
               style={active ? { background: accent, borderColor: accent, color: "#fff" } : undefined}
+              disabled={blocked}
               onClick={() => toggle(day)}
             >
               {day}
@@ -257,7 +305,10 @@ function DutyExamCalendar({ value, onChange, accent }) {
           );
         })}
       </div>
-      <p className="cs-duty-cal-hint">Click dates to select or remove. Total days updates automatically.</p>
+      <p className="cs-duty-cal-hint">
+        Select dates within the exam period
+        {bounds?.start && bounds?.end ? ` (${formatDdMmYyyyFromKey(minKey)} to ${formatDdMmYyyyFromKey(maxKey)}).` : "."}
+      </p>
     </div>
   );
 }
@@ -293,6 +344,11 @@ const Chargesheet = () => {
     [form.examKey]
   );
 
+  const dutyDateBounds = useMemo(
+    () => examDateBounds(form.examPeriod || selectedExam.period, form.examMonth || selectedExam.month),
+    [form.examPeriod, form.examMonth, selectedExam.period, selectedExam.month]
+  );
+
   const selectedCourses = useMemo(
     () => subjectCatalog[selectedExam.semester] || [],
     [selectedExam.semester, subjectCatalog]
@@ -313,6 +369,13 @@ const Chargesheet = () => {
   useEffect(() => {
     fetchStaff();
   }, []);
+
+  useEffect(() => {
+    if (!dutyDateBounds?.start || !dutyDateBounds?.end) return;
+    const minKey = dateKeyFromDate(dutyDateBounds.start);
+    const maxKey = dateKeyFromDate(dutyDateBounds.end);
+    setDutyDateKeys((prev) => prev.filter((key) => key >= minKey && key <= maxKey));
+  }, [dutyDateBounds]);
 
   useEffect(() => {
     const syncSubjects = () => setSubjectCatalog(loadSubjectCatalog(COURSE_CATALOG));
@@ -923,6 +986,19 @@ const Chargesheet = () => {
           box-shadow: 0 2px 8px rgba(99,102,241,.12);
           transform: translateY(-1px);
         }
+        .cs-duty-cal-day.is-disabled {
+          cursor: not-allowed;
+          background: #f1f5f9;
+          border-color: #e2e8f0;
+          color: #cbd5e1;
+          box-shadow: none;
+          transform: none;
+        }
+        .cs-duty-cal-day.is-disabled:hover {
+          border-color: #e2e8f0;
+          box-shadow: none;
+          transform: none;
+        }
         .cs-duty-cal-day.is-selected {
           border-color: transparent;
           box-shadow: 0 4px 12px rgba(99,102,241,.35);
@@ -1410,6 +1486,7 @@ const Chargesheet = () => {
                     value={dutyDateKeys}
                     onChange={setDutyDateKeys}
                     accent={selectedExam.color}
+                    bounds={dutyDateBounds}
                   />
                   <div className="cs-duty-dates-readout">
                     {dutyDatesJoined.trim() ? dutyDatesJoined : "No dates selected yet."}
