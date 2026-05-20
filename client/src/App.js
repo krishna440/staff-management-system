@@ -10,6 +10,7 @@ import NonTeaching from "./pages/NonTeaching";
 import Accounts from "./pages/Accounts";
 import TaskRates from "./pages/TaskRates";
 import ChangePassword from "./pages/ChangePassword";
+import AddSubject from "./pages/AddSubject";
 
 const getStoredUser = () => {
   try {
@@ -126,6 +127,14 @@ function App() {
           element={
             <RoleRoute roles={["ADMIN", "HOD"]}>
               <TaskRates />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/add-subject"
+          element={
+            <RoleRoute roles={["ADMIN", "HOD"]}>
+              <AddSubject />
             </RoleRoute>
           }
         />

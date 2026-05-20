@@ -6,6 +6,7 @@ import {
   TASK_RATES_CHANGED_EVENT,
   teachingRateDefaults,
 } from "../utils/taskRates";
+import { loadSubjectCatalog } from "../utils/subjectCatalogStorage";
 
 const EXAM_OPTIONS = [
   {
@@ -154,9 +155,6 @@ function assessmentAmountForEntry(entry) {
 }
 
 function paperSettingAmountForEntry(entry) {
-  if (entry.examType === "Re-ESE") {
-    return 0;
-  }
   return Number(entry.paperSets || 0) * Number(entry.paperSetRate || 0);
 }
 
@@ -170,13 +168,6 @@ function emptyChargeForm() {
     ...teachingRateDefaults(),
   };
 }
-
-const initialSubjectForm = {
-  semester: "Sem I",
-  code: "",
-  title: "",
-  kind: "theory",
-};
 
 function formatDdMmYyyyFromKey(dateKey) {
   const parts = dateKey.split("-").map(Number);
@@ -279,14 +270,7 @@ const Chargesheet = () => {
   const [error, setError] = useState("");
   const [form, setForm] = useState(() => emptyChargeForm());
   const [taskRateConfig, setTaskRateConfig] = useState(() => loadTaskRates());
-  const [customCourses, setCustomCourses] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("customCourses") || "{}");
-    } catch {
-      return {};
-    }
-  });
-  const [subjectForm, setSubjectForm] = useState(initialSubjectForm);
+  const [subjectCatalog, setSubjectCatalog] = useState(() => loadSubjectCatalog(COURSE_CATALOG));
   const navigate = useNavigate();
   const [dutyDateKeys, setDutyDateKeys] = useState([]);
 
@@ -310,11 +294,8 @@ const Chargesheet = () => {
   );
 
   const selectedCourses = useMemo(
-    () => [
-      ...(COURSE_CATALOG[selectedExam.semester] || []),
-      ...(customCourses[selectedExam.semester] || []),
-    ],
-    [selectedExam.semester, customCourses]
+    () => subjectCatalog[selectedExam.semester] || [],
+    [selectedExam.semester, subjectCatalog]
   );
 
   const selectedCourse = useMemo(
@@ -331,6 +312,16 @@ const Chargesheet = () => {
 
   useEffect(() => {
     fetchStaff();
+  }, []);
+
+  useEffect(() => {
+    const syncSubjects = () => setSubjectCatalog(loadSubjectCatalog(COURSE_CATALOG));
+    window.addEventListener("storage", syncSubjects);
+    window.addEventListener("mca-subject-catalog-changed", syncSubjects);
+    return () => {
+      window.removeEventListener("storage", syncSubjects);
+      window.removeEventListener("mca-subject-catalog-changed", syncSubjects);
+    };
   }, []);
 
   useEffect(() => {
@@ -425,39 +416,6 @@ const Chargesheet = () => {
     setSaved(false);
   };
 
-  const updateSubjectForm = (field, value) => {
-    setSubjectForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const addCustomSubject = () => {
-    const semester = subjectForm.semester;
-    const code = subjectForm.code.trim().toUpperCase();
-    const title = subjectForm.title.trim();
-    if (!semester || !code || !title) {
-      setError("Please select semester and enter subject code and name.");
-      return;
-    }
-
-    const nextCourse = {
-      code,
-      title,
-      ...(subjectForm.kind === "lab" ? { kind: "lab" } : {}),
-    };
-
-    setCustomCourses((prev) => {
-      const existing = prev[semester] || [];
-      const next = {
-        ...prev,
-        [semester]: [...existing.filter((course) => course.code !== code), nextCourse],
-      };
-      localStorage.setItem("customCourses", JSON.stringify(next));
-      return next;
-    });
-    setSubjectForm((prev) => ({ ...prev, code: "", title: "" }));
-    setError("");
-    setSaved(false);
-  };
-
   const handleSubmit = async () => {
     if (!form.staffId) { setError("Please select a staff member before saving."); return; }
     const teachingWorkload =
@@ -477,7 +435,7 @@ const Chargesheet = () => {
         ...form,
         dutyDates: dutyDatesJoined,
         dutyDays: dutyDaysFromCalendar,
-        paperSets: isLabCourse || selectedExam.examType === "Re-ESE" ? 0 : form.paperSets,
+        paperSets: isLabCourse ? 0 : form.paperSets,
         academicYear: selectedExam.academicYear,
         semester: selectedExam.semester,
         examType: selectedExam.examType,
@@ -1255,41 +1213,6 @@ const Chargesheet = () => {
             </div>
           </div>
 
-          <div className="cs-card">
-            <div className="cs-card-header">
-              <div className="cs-card-icon" style={{ background: "#e0f2fe" }}>SUB</div>
-              <h3>Add Subject</h3>
-              <span className="cs-card-badge" style={{ background: "#e0f2fe", color: "#075985" }}>Custom</span>
-            </div>
-            <div className="cs-card-body">
-              <div className="cs-section-divider"><span>Subject details</span></div>
-              <div className="cs-subject-builder">
-                <div className="cs-field">
-                  <label className="cs-label">Semester</label>
-                  <select className="cs-select" value={subjectForm.semester} onChange={(e) => updateSubjectForm("semester", e.target.value)}>
-                    {Object.keys(COURSE_CATALOG).map((sem) => <option key={sem} value={sem}>{sem}</option>)}
-                  </select>
-                </div>
-                <div className="cs-field">
-                  <label className="cs-label">Course code</label>
-                  <input className="cs-input" value={subjectForm.code} onChange={(e) => updateSubjectForm("code", e.target.value)} placeholder="R5MC5021P" />
-                </div>
-                <div className="cs-field">
-                  <label className="cs-label">Subject name</label>
-                  <input className="cs-input" value={subjectForm.title} onChange={(e) => updateSubjectForm("title", e.target.value)} placeholder="Subject name" />
-                </div>
-                <div className="cs-field">
-                  <label className="cs-label">Type</label>
-                  <select className="cs-select" value={subjectForm.kind} onChange={(e) => updateSubjectForm("kind", e.target.value)}>
-                    <option value="theory">Theory</option>
-                    <option value="lab">Lab</option>
-                  </select>
-                </div>
-                <button type="button" className="cs-subject-add" onClick={addCustomSubject}>Add</button>
-              </div>
-            </div>
-          </div>
-
           {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARD 2: Staff Member ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
           <div className="cs-card">
             <div className="cs-card-header">
@@ -1389,15 +1312,13 @@ const Chargesheet = () => {
                 </div>
 
                 <div className="cs-section-divider"><span>Workload & remuneration</span></div>
-                {(isLabCourse || selectedExam.examType === "Re-ESE") && (
+                {isLabCourse && (
                   <div className="cs-lab-note">
-                    {selectedExam.examType === "Re-ESE"
-                      ? "Re-ESE does not carry paper setting charges. Enter only assessment papers."
-                      : "Lab subjects do not carry paper setting charges. Enter only No. of Papers Assessed at Rs 20 per paper."}
+                    Lab subjects do not carry paper setting charges. Enter only No. of Papers Assessed at Rs 20 per paper.
                   </div>
                 )}
                 <div className="cs-work-grid">
-                  {!isLabCourse && selectedExam.examType !== "Re-ESE" && (
+                  {!isLabCourse && (
                     <WorkTile
                       icon="PS"
                       name="Paper Setting"

@@ -18,9 +18,6 @@ function assessmentAmountForRow(row) {
 }
 
 function paperSettingAmountForRow(row) {
-  if (row.examType === "Re-ESE") {
-    return 0;
-  }
   return Number(row.paperSets || 0) * paperRateForRow(row);
 }
 
@@ -158,7 +155,7 @@ function matchesExam(row, exam) {
 }
 
 function buildTeachingSheet(exam, allRows) {
-  const teachingRows = allRows.filter((row) => isTeaching(row));
+  const teachingRows = allRows.filter((row) => isTeaching(row) && hasTeachingExamWork(row));
   const rows = commonHeadingRows(exam, 8);
   const merges = [
     "A1:H1",
