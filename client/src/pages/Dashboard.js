@@ -242,7 +242,6 @@ const Dashboard = () => {
         { label: "Add Subject",        path: "/add-subject", roles: ["ADMIN", "HOD"], dot: true },
         { label: "Add Staff",          path: "/add-staff",   roles: ["ADMIN", "HOD"], dot: true },
         { label: "Task Rates",         path: "/task-rates",   roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Cost Summary",       path: "/",            roles: ["ADMIN", "HOD", "ACCOUNTS"], dot: true },
         { label: "Create Chargesheet", path: "/chargesheet", roles: ["ADMIN", "HOD"], dot: true },
         { label: "Create Timetable",   path: "/timetable",   roles: ["ADMIN", "HOD"], dot: true },
         { label: "Submit",             path: null,           roles: ["ADMIN", "HOD"], dot: true },

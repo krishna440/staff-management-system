@@ -7,9 +7,11 @@ const router = express.Router();
 const DEFAULT_PASSWORD = "123";
 const OTP_TTL_MINUTES = 10;
 const ALLOWED_USERS = [
-  { email: "apai@mc.vjti.ac.in", name: "HOD", role: "hod" },
-  { email: "sajankar@mc.vjti.ac.in", name: "Exam Committee", role: "exam_committee" },
+  { email: "apai@mc.vjti.ac.in", name: "Prof. Archana Pai", role: "hod" },
+  { email: "sajankar@mc.vjti.ac.in", name: "Prof. Sonali Ajankar", role: "exam_committee" },
+  { email: "bzolage@mc.vjti.ac.in", name: "Dr. Bhakti Zolage", role: "Guide"},
   { email: "bppawar_mc24@mc.vjti.ac.in", name: "Admin", role: "admin" },
+  { email: "test@gmail.com", name: "Test Admin", role: "admin", password: "admin111", mustChangePassword: false },
 ];
 
 function normalizeEmail(email) {
@@ -36,12 +38,15 @@ async function ensureAllowedUsers() {
 
   await Promise.all(ALLOWED_USERS.map(async (account) => {
     const existing = await User.findOne({ email: account.email });
+    const passwordHash = account.password
+      ? await bcrypt.hash(account.password, 10)
+      : defaultPasswordHash;
 
     if (!existing) {
       await User.create({
         ...account,
-        password: defaultPasswordHash,
-        mustChangePassword: true,
+        password: passwordHash,
+        mustChangePassword: account.mustChangePassword ?? true,
       });
       return;
     }
@@ -51,9 +56,14 @@ async function ensureAllowedUsers() {
       role: account.role,
     };
 
+    if (account.password) {
+      updates.password = passwordHash;
+      updates.mustChangePassword = account.mustChangePassword ?? false;
+    }
+
     if (existing.mustChangePassword !== false || !existing.password || !existing.password.startsWith("$2")) {
-      updates.password = defaultPasswordHash;
-      updates.mustChangePassword = true;
+      updates.password = updates.password || defaultPasswordHash;
+      updates.mustChangePassword = updates.mustChangePassword ?? true;
     }
 
     await User.updateOne({ _id: existing._id }, { $set: updates });
