@@ -456,7 +456,7 @@ const Dashboard = () => {
           width: 240px; min-width: 240px;
           background: #0b1120;
           display: flex; flex-direction: column;
-          position: relative; overflow: hidden;
+          position: relative; overflow: visible;
           transition: width .2s ease, min-width .2s ease;
         }
         .sidebar::before {
@@ -485,11 +485,12 @@ const Dashboard = () => {
           margin-top: 3px; letter-spacing: 0.5px; text-transform: uppercase;
         }
         .sidebar-toggle {
-          margin-left: auto; width: 30px; height: 30px; border: 1px solid rgba(255,255,255,.12);
-          background: rgba(255,255,255,.06); color: #dbeafe; border-radius: 8px; cursor: pointer;
-          font-size: 16px; line-height: 1;
+          position: absolute; right: -14px; top: 24px; z-index: 100;
+          width: 30px; height: 30px; border: 1px solid rgba(148,163,184,.35);
+          background: #111827; color: #dbeafe; border-radius: 999px; cursor: pointer;
+          font-size: 16px; line-height: 1; box-shadow: 0 8px 20px rgba(15,23,42,.28);
         }
-        .dash-shell.sidebar-collapsed .sidebar-toggle { margin-left: 0; }
+        .dash-shell.sidebar-collapsed .sidebar-toggle { right: -15px; }
         .nav-section { padding: 8px 12px 0; flex: 1; overflow-y: auto; }
         .nav-group-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.9px;

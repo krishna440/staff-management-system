@@ -61,7 +61,7 @@ export default function PortalShell({ children }) {
         .portal-sidebar {
           width: 248px; min-width: 248px; background: #0b1120; color: #fff;
           display: flex; flex-direction: column; transition: width .2s ease, min-width .2s ease;
-          position: sticky; top: 0; height: 100vh; z-index: 50; overflow: hidden;
+          position: sticky; top: 0; height: 100vh; z-index: 50; overflow: visible;
         }
         .portal-shell-collapsed .portal-sidebar { width: 72px; min-width: 72px; }
         .portal-sidebar-head { padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 12px; }
@@ -71,10 +71,12 @@ export default function PortalShell({ children }) {
         .portal-brand-sub { font-size: 10px; color: rgba(255,255,255,.46); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
         .portal-shell-collapsed .portal-brand { display: none; }
         .portal-toggle {
-          margin-left: auto; width: 30px; height: 30px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06);
-          color: #dbeafe; border-radius: 8px; cursor: pointer; font-size: 16px; line-height: 1;
+          position: absolute; right: -14px; top: 24px; z-index: 100;
+          width: 30px; height: 30px; border: 1px solid rgba(148,163,184,.35); background: #111827;
+          color: #dbeafe; border-radius: 999px; cursor: pointer; font-size: 16px; line-height: 1;
+          box-shadow: 0 8px 20px rgba(15,23,42,.28);
         }
-        .portal-shell-collapsed .portal-toggle { margin-left: 0; }
+        .portal-shell-collapsed .portal-toggle { right: -15px; }
         .portal-nav { padding: 10px 10px 0; flex: 1; overflow-y: auto; }
         .portal-group-label { padding: 14px 10px 6px; font-size: 10px; font-weight: 800; color: rgba(255,255,255,.3); text-transform: uppercase; letter-spacing: .08em; }
         .portal-shell-collapsed .portal-group-label { display: none; }
