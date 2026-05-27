@@ -234,7 +234,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
       <div className="sd-hero" style={{ background: tok.grad }}>
         <div className="sd-hero-inner">
           <div className="sd-hero-badge" style={{ background: "rgba(255,255,255,0.15)" }}>
-            {isTeaching ? "🎓 Teaching" : "🏢 Non-Teaching"}
+            {isTeaching ? "Teaching" : "Non-Teaching"}
           </div>
           <h1 className="sd-hero-title">{title}</h1>
           <p className="sd-hero-sub">{subtitle}</p>
@@ -263,7 +263,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
         <div className="sd-error">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           <span>{error}</span>
-          <button onClick={() => setError(null)}>✕</button>
+          <button onClick={() => setError(null)}>Close</button>
         </div>
       )}
 
@@ -282,7 +282,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
             style={{ "--ring": tok.ring, "--acc": tok.accent }}
           />
           {searchQ && (
-            <button className="sd-search-clear" onClick={() => setSearchQ("")}>✕</button>
+            <button className="sd-search-clear" onClick={() => setSearchQ("")}>Close</button>
           )}
         </div>
 
@@ -495,7 +495,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
                 <div className="sd-modal-title">Edit Staff Member</div>
                 <div className="sd-modal-sub">{editing.name}</div>
               </div>
-              <button className="sd-modal-close" onClick={closeEdit}>✕</button>
+              <button className="sd-modal-close" onClick={closeEdit}>Close</button>
             </div>
 
             {error && (

@@ -120,7 +120,7 @@ export default function AddStaff() {
 
         {/* Header */}
         <div style={s.header}>
-          <span style={s.headerEmoji}>🏫</span>
+          
           <div>
             <h1 style={s.title}>Add New Staff</h1>
             <p style={s.subtitle}>Fill in the details below to register a staff member</p>
@@ -132,9 +132,9 @@ export default function AddStaff() {
           {/* Server Error Banner */}
           {serverError && (
             <div style={s.errorBanner}>
-              <span style={s.errorBannerIcon}>⚠️</span>
+              
               <span>{serverError}</span>
-              <button style={s.errorBannerClose} onClick={() => setServerError("")}>✕</button>
+              <button style={s.errorBannerClose} onClick={() => setServerError("")}>Close</button>
             </div>
           )}
 
@@ -145,7 +145,7 @@ export default function AddStaff() {
                 ? <img src={avatar} alt="staff" style={s.avatarImg} />
                 : (
                   <div style={s.avatarPlaceholder}>
-                    <span style={s.cameraIcon}>📷</span>
+                    <span style={s.cameraIcon}></span>
                     <span style={s.uploadText}>Upload Photo</span>
                     <span style={s.uploadHint}>JPG or PNG</span>
                   </div>
@@ -166,7 +166,7 @@ export default function AddStaff() {
                   onClick={() => setForm(prev => ({ ...prev, type: t }))}
                   style={{ ...s.toggleBtn, ...(form.type === t ? s.toggleActive : {}) }}
                 >
-                  {t === "Teaching" ? "📚" : "🔧"} {t}
+                  {t}
                 </button>
               ))}
             </div>

@@ -306,7 +306,7 @@ const TaskRates = () => {
           </p>
         </div>
         <button type="button" className="tr-back" onClick={() => navigate("/")}>
-          ← Dashboard
+          Dashboard
         </button>
       </header>
 

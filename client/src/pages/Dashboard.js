@@ -10,8 +10,15 @@ import { loadTaskRates } from "../utils/taskRates";
 const EXAM_MONTHS = [
   "January 2026",
   "February 2026",
+  "March 2026",
+  "April 2026",
   "May 2026",
   "June 2026",
+  "July 2026",
+  "August 2026",
+  "September 2026",
+  "October 2026",
+  "November 2026",
   "December 2026",
 ];
 
@@ -122,6 +129,14 @@ const Dashboard = () => {
   const userRole =
     (user?.user?.role || user?.user?.type || "").toUpperCase() || "USER";
   const canManageEntries = userRole === "ADMIN" || userRole === "HOD";
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("portal_sidebar_collapsed") === "1"
+  );
+  const toggleSidebar = () => {
+    const next = !sidebarCollapsed;
+    setSidebarCollapsed(next);
+    localStorage.setItem("portal_sidebar_collapsed", next ? "1" : "0");
+  };
 
   const startEditEntry = (entry) => {
     setEditingEntry(entry);
@@ -238,13 +253,11 @@ const Dashboard = () => {
     {
       label: "Chargesheet",
       items: [
-        { label: "New Entry",          path: "/chargesheet", roles: ["ADMIN", "HOD"], dot: true },
+        { label: "Create Chargesheet", path: "/chargesheet", roles: ["ADMIN", "HOD"], dot: true },
         { label: "Add Subject",        path: "/add-subject", roles: ["ADMIN", "HOD"], dot: true },
         { label: "Add Staff",          path: "/add-staff",   roles: ["ADMIN", "HOD"], dot: true },
         { label: "Task Rates",         path: "/task-rates",   roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Create Chargesheet", path: "/chargesheet", roles: ["ADMIN", "HOD"], dot: true },
         { label: "Create Timetable",   path: "/timetable",   roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Submit",             path: null,           roles: ["ADMIN", "HOD"], dot: true },
         { label: "Accounts Section",   path: "/accounts",    roles: ["ACCOUNTS"],     dot: true },
       ],
     },
@@ -432,6 +445,11 @@ const Dashboard = () => {
         body { font-family: 'DM Sans', sans-serif; background: #f0f2f8; }
 
         .dash-shell { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
+        .dash-shell.sidebar-collapsed .sidebar { width: 72px; min-width: 72px; }
+        .dash-shell.sidebar-collapsed .logo-text,
+        .dash-shell.sidebar-collapsed .nav-group-label,
+        .dash-shell.sidebar-collapsed .nav-item span:not(.nav-dot),
+        .dash-shell.sidebar-collapsed .sidebar-user-info { display: none; }
 
         /* SIDEBAR */
         .sidebar {
@@ -439,6 +457,7 @@ const Dashboard = () => {
           background: #0b1120;
           display: flex; flex-direction: column;
           position: relative; overflow: hidden;
+          transition: width .2s ease, min-width .2s ease;
         }
         .sidebar::before {
           content: ''; position: absolute;
@@ -465,6 +484,12 @@ const Dashboard = () => {
           font-size: 10px; color: rgba(255,255,255,0.38);
           margin-top: 3px; letter-spacing: 0.5px; text-transform: uppercase;
         }
+        .sidebar-toggle {
+          margin-left: auto; width: 30px; height: 30px; border: 1px solid rgba(255,255,255,.12);
+          background: rgba(255,255,255,.06); color: #dbeafe; border-radius: 8px; cursor: pointer;
+          font-size: 16px; line-height: 1;
+        }
+        .dash-shell.sidebar-collapsed .sidebar-toggle { margin-left: 0; }
         .nav-section { padding: 8px 12px 0; flex: 1; overflow-y: auto; }
         .nav-group-label {
           font-size: 9.5px; font-weight: 600; letter-spacing: 0.9px;
@@ -763,7 +788,7 @@ const Dashboard = () => {
         .readonly-banner strong { font-weight: 600; }
       `}</style>
 
-      <div className="dash-shell">
+      <div className={`dash-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
         {/* ── SIDEBAR ───────────────────────────────────────────── */}
         <div className="sidebar">
           <div className="logo-section">
@@ -774,6 +799,9 @@ const Dashboard = () => {
               <h3>VJTI</h3>
               <p>Chargesheet Portal</p>
             </div>
+            <button className="sidebar-toggle" onClick={toggleSidebar} title={sidebarCollapsed ? "Open sidebar" : "Close sidebar"}>
+              {sidebarCollapsed ? ">" : "<"}
+            </button>
           </div>
 
           {/* Role access banner — only for ACCOUNTS */}
@@ -850,39 +878,12 @@ const Dashboard = () => {
               <div className="topbar-title">Dashboard</div>
             </div>
 
-            {/* Approve button — HOD only */}
-            {userRole === "HOD" && (
-              <button
-                onClick={async () => {
-                  try {
-                    await axios.post("https://staff-management-system-eluv.onrender.com/api/month/approve", {
-                      month: selectedMonth,
-                      approvedBy: user?.user?.name || user?.name,
-                    });
-                    await fetchReport();
-                    await fetchChargesheets();
-                    alert("Month Approved ✅");
-                  } catch (err) {
-                    setError("Failed to approve monthly report. Please check the backend server.");
-                  }
-                }}
-                style={{
-                  background: "#10b981", color: "#fff",
-                  padding: "8px 14px", borderRadius: "8px",
-                  border: "none", cursor: "pointer",
-                  fontFamily: "'DM Sans', sans-serif",
-                  fontSize: 13, fontWeight: 600,
-                }}
-              >
-                Approve Monthly Report
-              </button>
-            )}
 
             <div className="topbar-right">
               {/* Download PDF — ACCOUNTS + HOD + ADMIN */}
               {(userRole === "ACCOUNTS" || userRole === "HOD" || userRole === "ADMIN") && (
                 <button className="btn-pdf" onClick={generateChargesheetPDF}>
-                  ↓ Download Chargesheet
+                  Download Chargesheet
                 </button>
               )}
 
@@ -936,7 +937,7 @@ const Dashboard = () => {
             {/* Read-only notice for ACCOUNTS */}
             {userRole === "ACCOUNTS" && (
               <div className="readonly-banner">
-                <span className="icon">🔒</span>
+                <span className="icon">Read-only</span>
                 <p>
                   <strong>Read-only view.</strong> You can review cost summaries and download
                   the chargesheet. Staff management and entry creation are restricted to
@@ -965,7 +966,7 @@ const Dashboard = () => {
                 <div className="kpi-grid">
                   <div className="kpi-card teaching">
                     <div className="kpi-top">
-                      <div className="kpi-icon teaching">🎓</div>
+                      <div className="kpi-icon teaching">T</div>
                       <div className="kpi-badge teaching">Teaching</div>
                     </div>
                     <div>
@@ -986,7 +987,7 @@ const Dashboard = () => {
 
                   <div className="kpi-card nonteaching">
                     <div className="kpi-top">
-                      <div className="kpi-icon nonteaching">🏢</div>
+                      <div className="kpi-icon nonteaching">N</div>
                       <div className="kpi-badge nonteaching">Non-Teaching</div>
                     </div>
                     <div>
@@ -1116,37 +1117,14 @@ const Dashboard = () => {
                               </span>
                             </div>
 
-                            {/* Approve button — HOD only, not visible to ACCOUNTS */}
-                            {(userRole === "HOD" || canManageEntries) && (
+                            {canManageEntries && (
                               <div className="cs-row-actions">
-                                {userRole === "HOD" && c.status === "Pending" && (
-                                  <button
-                                    onClick={async () => {
-                                      await axios.put(
-                                        `https://staff-management-system-eluv.onrender.com/api/chargesheet/status/${c._id}`,
-                                        { status: "Approved_by_HOD" }
-                                      );
-                                      refreshEntryData();
-                                    }}
-                                    style={{
-                                      background: "#10b981", color: "#fff", border: "none",
-                                      padding: "6px 14px", borderRadius: "8px",
-                                      cursor: "pointer", fontSize: 12, fontWeight: 600,
-                                    }}
-                                  >
-                                    Approve
-                                  </button>
-                                )}
-                                {canManageEntries && (
-                                  <>
-                                    <button className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(c)}>
-                                      Edit
-                                    </button>
-                                    <button className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(c)}>
-                                      Delete
-                                    </button>
-                                  </>
-                                )}
+                                <button className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(c)}>
+                                  Edit
+                                </button>
+                                <button className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(c)}>
+                                  Delete
+                                </button>
                               </div>
                             )}
                           </div>
@@ -1260,10 +1238,8 @@ const Dashboard = () => {
                               onChange={(e) => updateEditField("status", e.target.value)}
                             >
                               <option>Pending</option>
-                              <option>Approved_by_HOD</option>
                               <option>In Review</option>
                               <option>Submitted</option>
-                              <option>Final_Approved</option>
                             </select>
                           </div>
                         </div>

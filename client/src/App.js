@@ -11,6 +11,7 @@ import Accounts from "./pages/Accounts";
 import TaskRates from "./pages/TaskRates";
 import ChangePassword from "./pages/ChangePassword";
 import AddSubject from "./pages/AddSubject";
+import PortalShell from "./components/PortalShell";
 
 const getStoredUser = () => {
   try {
@@ -46,10 +47,7 @@ const RoleRoute = ({ roles, children }) => {
 function App() {
   return (
     <Router>
-      <Routes>
-
-        {/* ðŸ”“ Public */}
-        <Route path="/login" element={<Login />} />
+      <Routes>`r`n        <Route path="/login" element={<Login />} />
         <Route
           path="/change-password"
           element={
@@ -57,10 +55,7 @@ function App() {
               <ChangePassword />
             </PrivateRoute>
           }
-        />
-
-        {/* ðŸ”’ Protected Routes */}
-        <Route
+        />`r`n        <Route
           path="/"
           element={
             <PasswordReadyRoute>
@@ -73,7 +68,7 @@ function App() {
           path="/add-staff"
           element={
             <PasswordReadyRoute>
-              <AddStaff />
+              <PortalShell><AddStaff /></PortalShell>
             </PasswordReadyRoute>
           }
         />
@@ -82,7 +77,7 @@ function App() {
           path="/chargesheet"
           element={
             <PasswordReadyRoute>
-              <Chargesheet />
+              <PortalShell><Chargesheet /></PortalShell>
             </PasswordReadyRoute>
           }
         />
@@ -91,17 +86,14 @@ function App() {
           path="/timetable"
           element={
             <PasswordReadyRoute>
-              <Timetable />
+              <PortalShell><Timetable /></PortalShell>
             </PasswordReadyRoute>
           }
-        />
-
-        {/* âœ… Sidebar Pages */}
-        <Route
+        />`r`n        <Route
           path="/teaching"
           element={
             <PasswordReadyRoute>
-              <Teaching />
+              <PortalShell><Teaching /></PortalShell>
             </PasswordReadyRoute>
           }
         />
@@ -110,7 +102,7 @@ function App() {
           path="/non-teaching"
           element={
             <PasswordReadyRoute>
-              <NonTeaching />
+              <PortalShell><NonTeaching /></PortalShell>
             </PasswordReadyRoute>
           }
         />
@@ -118,7 +110,7 @@ function App() {
   path="/accounts"
   element={
     <RoleRoute roles={["ACCOUNTS"]}>
-      <Accounts />
+      <PortalShell><Accounts /></PortalShell>
     </RoleRoute>
   }
 />
@@ -126,7 +118,7 @@ function App() {
           path="/task-rates"
           element={
             <RoleRoute roles={["ADMIN", "HOD"]}>
-              <TaskRates />
+              <PortalShell><TaskRates /></PortalShell>
             </RoleRoute>
           }
         />
@@ -134,7 +126,7 @@ function App() {
           path="/add-subject"
           element={
             <RoleRoute roles={["ADMIN", "HOD"]}>
-              <AddSubject />
+              <PortalShell><AddSubject /></PortalShell>
             </RoleRoute>
           }
         />

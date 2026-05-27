@@ -412,7 +412,7 @@ const Login = () => {
                   Signing in…
                 </>
               ) : (
-                "Sign in →"
+                "Sign in"
               )}
             </button>
 
