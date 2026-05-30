@@ -5,6 +5,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCourse, getCoursesForSemester, SEMESTERS } from "../utils/courseCatalog";
 import { addVjtiLogoToPdf } from "../utils/logo";
+import API from "../services/api";
 
 const EXAM_TYPES = [
   { value: "MST", label: "MST", color: "#0ea5e9" },
@@ -37,14 +38,11 @@ const DEFAULT_LAB_SLOTS = [
   { id: "slot4", label: "3.30 PM to 5.00 PM" },
 ];
 
-const SAVED_TIMETABLES_KEY = "mca_saved_timetables_v1";
-
-function loadSavedTimetables() {
+function getLoggedInUser() {
   try {
-    const saved = JSON.parse(localStorage.getItem(SAVED_TIMETABLES_KEY) || "[]");
-    return Array.isArray(saved) ? saved : [];
+    return JSON.parse(sessionStorage.getItem("user") || "null")?.user || null;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -66,8 +64,13 @@ export default function Timetable() {
   const [labSlots, setLabSlots] = useState(DEFAULT_LAB_SLOTS);
   const [activeTab, setActiveTab] = useState("theory");
   const [downloading, setDownloading] = useState("");
-  const [savedTimetables, setSavedTimetables] = useState(loadSavedTimetables);
+  const [savedTimetables, setSavedTimetables] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedError, setSavedError] = useState("");
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [editingDraftId, setEditingDraftId] = useState("");
   const [previewTimetable, setPreviewTimetable] = useState(null);
+  const loggedInUser = getLoggedInUser();
 
   const courses = useMemo(
     () => getCoursesForSemester(settings.semester),
@@ -89,13 +92,36 @@ export default function Timetable() {
     [settings.examType]
   );
 
-  useEffect(() => { fetchStaff(); }, []);
+  useEffect(() => {
+    fetchStaff();
+    fetchSavedTimetables();
+  }, []);
 
   const fetchStaff = async () => {
     try {
       const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/staff");
       setStaff(res.data || []);
     } catch (err) { console.error(err); }
+  };
+
+  const fetchSavedTimetables = async () => {
+    const user = getLoggedInUser();
+    if (!user?.id) {
+      setSavedError("Login again to load saved timetables.");
+      return;
+    }
+
+    try {
+      setSavedLoading(true);
+      setSavedError("");
+      const res = await API.get("/timetable-drafts", { params: { userId: user.id } });
+      setSavedTimetables(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error(err);
+      setSavedError(err.response?.data?.message || "Unable to load saved timetables.");
+    } finally {
+      setSavedLoading(false);
+    }
   };
 
   const updateSetting = (field, value) => {
@@ -211,7 +237,7 @@ export default function Timetable() {
   };
 
   const currentTimetable = () => ({
-    id: Date.now(),
+    id: editingDraftId || Date.now(),
     name: `${settings.examType} ${settings.semester} ${settings.month} ${settings.year}`,
     updatedAt: new Date().toISOString(),
     settings,
@@ -220,30 +246,72 @@ export default function Timetable() {
     labSlots,
   });
 
-  const saveTimetables = (items) => {
-    setSavedTimetables(items);
-    localStorage.setItem(SAVED_TIMETABLES_KEY, JSON.stringify(items));
-  };
+  const timetableDraftPayload = (item) => ({
+    userId: loggedInUser?.id,
+    userEmail: loggedInUser?.email,
+    name: item.name,
+    settings: item.settings,
+    theoryRows: item.theoryRows,
+    labRows: item.labRows,
+    labSlots: item.labSlots,
+  });
 
-  const saveCurrentTimetable = () => {
+  const saveCurrentTimetable = async () => {
+    if (!loggedInUser?.id) {
+      setSavedError("Login again before saving a timetable.");
+      return;
+    }
+
     const item = currentTimetable();
-    saveTimetables([item, ...savedTimetables]);
-    setPreviewTimetable(item);
+    try {
+      setSavingDraft(true);
+      setSavedError("");
+      const payload = timetableDraftPayload(item);
+      const res = editingDraftId
+        ? await API.put(`/timetable-drafts/${editingDraftId}`, payload)
+        : await API.post("/timetable-drafts", payload);
+      const saved = res.data;
+      setEditingDraftId(saved.id || saved._id);
+      setSavedTimetables((prev) => [
+        saved,
+        ...prev.filter((draft) => String(draft.id || draft._id) !== String(saved.id || saved._id)),
+      ]);
+      setPreviewTimetable(saved);
+    } catch (err) {
+      console.error(err);
+      setSavedError(err.response?.data?.message || "Unable to save timetable.");
+    } finally {
+      setSavingDraft(false);
+    }
   };
 
   const editSavedTimetable = (item) => {
+    const draftId = item.id || item._id;
     setSettings(item.settings);
     setTheoryRows(item.theoryRows?.length ? item.theoryRows : [DEFAULT_THEORY_ROW]);
     setLabRows(item.labRows?.length ? item.labRows : [DEFAULT_LAB_ROW]);
     setLabSlots(item.labSlots?.length ? item.labSlots : DEFAULT_LAB_SLOTS);
+    setEditingDraftId(draftId);
     setPreviewTimetable(null);
     setActiveTab("theory");
   };
 
-  const deleteSavedTimetable = (id) => {
-    const next = savedTimetables.filter((item) => item.id !== id);
-    saveTimetables(next);
-    if (previewTimetable?.id === id) setPreviewTimetable(null);
+  const deleteSavedTimetable = async (id) => {
+    if (!loggedInUser?.id) {
+      setSavedError("Login again before deleting a timetable.");
+      return;
+    }
+
+    try {
+      setSavedError("");
+      await API.delete(`/timetable-drafts/${id}`, { params: { userId: loggedInUser.id } });
+      setSavedTimetables((prev) => prev.filter((item) => String(item.id || item._id) !== String(id)));
+      if (String(previewTimetable?.id || previewTimetable?._id) === String(id)) setPreviewTimetable(null);
+      if (String(editingDraftId) === String(id)) setEditingDraftId("");
+    } catch (err) {
+      console.error(err);
+      setSavedError(err.response?.data?.message || "Unable to delete timetable.");
+    }
   };
 
   const downloadTheoryPdf = async (source = currentTimetable()) => {
@@ -654,15 +722,20 @@ export default function Timetable() {
             <span className="tt-card-badge" style={{ background: "#e0f2fe", color: "#0369a1" }}>
               {savedTimetables.length} saved
             </span>
-            <button className="tt-add-btn" onClick={saveCurrentTimetable}>Save Time Table</button>
+            <button className="tt-add-btn" onClick={saveCurrentTimetable} disabled={savingDraft}>
+              {savingDraft ? "Saving..." : editingDraftId ? "Update Time Table" : "Save Time Table"}
+            </button>
           </div>
           <div className="tt-card-body">
-            {savedTimetables.length === 0 ? (
+            {savedError && <div className="tt-empty-saved" style={{ color: "#b91c1c" }}>{savedError}</div>}
+            {savedLoading ? (
+              <div className="tt-empty-saved">Loading saved timetables...</div>
+            ) : savedTimetables.length === 0 ? (
               <div className="tt-empty-saved">No saved timetable yet.</div>
             ) : (
               <div className="tt-saved-list">
                 {savedTimetables.map((item) => (
-                  <div key={item.id} className="tt-saved-row">
+                  <div key={item.id || item._id} className="tt-saved-row">
                     <div>
                       <div className="tt-saved-title">{item.name}</div>
                       <div className="tt-saved-meta">
@@ -673,7 +746,7 @@ export default function Timetable() {
                       <button className="tt-mini-action" onClick={() => setPreviewTimetable(item)}>Preview</button>
                       <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}>Edit</button>
                       <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}>Download</button>
-                      <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id)} title="Delete saved timetable">X</button>
+                      <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id || item._id)} title="Delete saved timetable">X</button>
                     </div>
                   </div>
                 ))}

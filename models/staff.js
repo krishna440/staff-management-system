@@ -11,5 +11,4 @@ const staffSchema = new mongoose.Schema({
   photo: String
 }, { timestamps: true });
 
-// ✅ VERY IMPORTANT
 module.exports = mongoose.model("Staff", staffSchema);

@@ -7,6 +7,7 @@ const authRoutes = require("./routes/authRoutes");
 const chargesheetRoutes = require("./routes/chargesheetRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const monthRoutes = require("./routes/monthRoutes");
+const timetableDraftRoutes = require("./routes/timetableDraftRoutes");
 
 
 
@@ -32,6 +33,7 @@ app.use("/api/report", require("./routes/reportRoutes"));
 app.use("/api/auth", authRoutes);
 app.use("/api/chargesheet", chargesheetRoutes); 
 app.use("/api/month", monthRoutes);
+app.use("/api/timetable-drafts", timetableDraftRoutes);
 // Connect DB
 connectDB();
 

@@ -1,6 +1,6 @@
 const Staff = require("../models/staff"); // ⚠️ Capital S (important)
 
-// ✅ Add Staff
+//  Add Staff
 exports.addStaff = async (req, res) => {
   try {
     console.log("BODY:", req.body);
@@ -45,7 +45,7 @@ exports.addStaff = async (req, res) => {
   }
 };
 
-// ✅ Get Staff
+// Get Staff
 exports.getStaff = async (req, res) => {
   try {
     const data = await Staff.find();
@@ -55,7 +55,7 @@ exports.getStaff = async (req, res) => {
   }
 };
 
-// ✅ Update Staff
+// Update Staff
 exports.updateStaff = async (req, res) => {
   try {
     const updated = await Staff.findByIdAndUpdate(
@@ -72,7 +72,7 @@ exports.updateStaff = async (req, res) => {
   }
 };
 
-// ✅ Delete Staff
+//  Delete Staff
 exports.deleteStaff = async (req, res) => {
   try {
     const deleted = await Staff.findByIdAndDelete(req.params.id);

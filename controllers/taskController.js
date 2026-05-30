@@ -1,6 +1,6 @@
 const Task = require("../models/Task");
 
-// ✅ Add Task
+//  Add Task
 exports.addTask = async (req, res) => {
   try {
     const { name, rate, type } = req.body;
@@ -28,7 +28,7 @@ exports.addTask = async (req, res) => {
   }
 };
 
-// ✅ Get All Tasks
+//  Get All Tasks
 exports.getTasks = async (req, res) => {
   try {
     const data = await Task.find();
@@ -38,7 +38,7 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// ✅ Delete Task (optional)
+//  Delete Task (optional)
 exports.deleteTask = async (req, res) => {
   try {
     await Task.findByIdAndDelete(req.params.id);
