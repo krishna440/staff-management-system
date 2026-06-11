@@ -126,6 +126,8 @@ exports.generateReport = async (req, res) => {
         examType: cs.examType,
         examMonth: cs.examMonth,
         examPeriod: cs.examPeriod,
+        examStartDate: cs.examStartDate,
+        examEndDate: cs.examEndDate,
         examLabel: cs.examLabel,
         courseCode: cs.courseCode,
         courseTitle: cs.courseTitle,

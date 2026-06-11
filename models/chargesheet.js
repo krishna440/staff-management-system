@@ -19,6 +19,8 @@ const chargesheetSchema = new mongoose.Schema({
   examType: String,
   examMonth: String,
   examPeriod: String,
+  examStartDate: String,
+  examEndDate: String,
   examLabel: String,
 
   courseCode: String,

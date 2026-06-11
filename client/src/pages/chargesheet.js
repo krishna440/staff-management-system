@@ -146,6 +146,7 @@ const STATIC_FORM_FIELDS = {
 };
 
 const RELIEVER_ROOMS = ["AL301", "AL207"];
+const EXAM_PERIOD_STORAGE_KEY = "mca_exam_period_ranges_v1";
 
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry.assessments || 0);
@@ -162,11 +163,14 @@ function paperSettingAmountForEntry(entry) {
 
 function emptyChargeForm() {
   const first = EXAM_OPTIONS[0];
+  const range = examRangeFor(first);
   return {
     ...STATIC_FORM_FIELDS,
     examKey: first.key,
-    examPeriod: first.period,
-    examMonth: first.month,
+    examStartDate: range.start,
+    examEndDate: range.end,
+    examPeriod: examPeriodText(range, first.period),
+    examMonth: monthLabelFromDateKey(range.start, first.month),
     ...teachingRateDefaults(),
   };
 }
@@ -188,6 +192,20 @@ function dateKeyFromDate(date) {
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
+}
+
+function dateFromDateKey(dateKey) {
+  const parts = String(dateKey || "").split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+  const [year, month, day] = parts;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return date;
+}
+
+function monthLabelFromDateKey(dateKey, fallback = "") {
+  const date = dateFromDateKey(dateKey);
+  return date ? date.toLocaleString("en-IN", { month: "long", year: "numeric" }) : fallback;
 }
 
 function parseDateText(value) {
@@ -216,6 +234,41 @@ function examDateBounds(period, month) {
     if (start && end) return start <= end ? { start, end } : { start: end, end: start };
   }
   return parseMonthText(period) || parseMonthText(month);
+}
+
+function loadStoredExamPeriods() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(EXAM_PERIOD_STORAGE_KEY) || "{}");
+    return stored && typeof stored === "object" ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredExamPeriod(examKey, range) {
+  const stored = loadStoredExamPeriods();
+  stored[examKey] = range;
+  localStorage.setItem(EXAM_PERIOD_STORAGE_KEY, JSON.stringify(stored));
+}
+
+function defaultExamRange(exam) {
+  const bounds = examDateBounds(exam.period, exam.month);
+  return {
+    start: bounds?.start ? dateKeyFromDate(bounds.start) : "",
+    end: bounds?.end ? dateKeyFromDate(bounds.end) : "",
+  };
+}
+
+function examRangeFor(exam) {
+  const stored = loadStoredExamPeriods()[exam.key];
+  if (stored?.start && stored?.end) return stored;
+  return defaultExamRange(exam);
+}
+
+function examPeriodText(range, fallback = "") {
+  return range?.start && range?.end
+    ? `${formatDdMmYyyyFromKey(range.start)} to ${formatDdMmYyyyFromKey(range.end)}`
+    : fallback;
 }
 
 /** Monday-first weekday index (0 = Monday, 6 = Sunday). */
@@ -315,6 +368,92 @@ function DutyExamCalendar({ value, onChange, accent, bounds }) {
   );
 }
 
+function ExamPeriodRangeCalendar({ value, onChange, accent, fallbackMonth }) {
+  const fallbackCursor = useMemo(() => {
+    const date = parseMonthText(fallbackMonth)?.start || new Date();
+    return { year: date.getFullYear(), month: date.getMonth() };
+  }, [fallbackMonth]);
+  const activeCursor = useMemo(() => {
+    const startDate = dateFromDateKey(value?.start);
+    return startDate
+      ? { year: startDate.getFullYear(), month: startDate.getMonth() }
+      : fallbackCursor;
+  }, [value?.start, fallbackCursor]);
+  const [cursor, setCursor] = useState(activeCursor);
+
+  useEffect(() => {
+    setCursor(activeCursor);
+  }, [activeCursor]);
+
+  const monthMeta = useMemo(() => {
+    const first = new Date(cursor.year, cursor.month, 1);
+    const last = new Date(cursor.year, cursor.month + 1, 0);
+    const daysInMonth = last.getDate();
+    const pad = mondayWeekdayIndex(first.getDay());
+    return { daysInMonth, pad, monthLabel: first.toLocaleString("en-IN", { month: "long", year: "numeric" }) };
+  }, [cursor.year, cursor.month]);
+
+  const selectDay = (day) => {
+    const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (!value?.start || (value.start && value.end)) {
+      onChange({ start: key, end: "" });
+      return;
+    }
+
+    onChange(key < value.start ? { start: key, end: value.start } : { start: value.start, end: key });
+  };
+
+  const shiftMonth = (delta) => {
+    const d = new Date(cursor.year, cursor.month + delta, 1);
+    setCursor({ year: d.getFullYear(), month: d.getMonth() });
+  };
+
+  const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const padCells = Array.from({ length: monthMeta.pad }, () => null);
+  const dayCells = Array.from({ length: monthMeta.daysInMonth }, (_, index) => index + 1);
+
+  return (
+    <div className="cs-duty-cal cs-range-cal">
+      <div className="cs-duty-cal-head">
+        <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(-1)} aria-label="Previous month">
+          â€¹
+        </button>
+        <span className="cs-duty-cal-title">{monthMeta.monthLabel}</span>
+        <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(1)} aria-label="Next month">
+          â€º
+        </button>
+      </div>
+      <div className="cs-duty-cal-weekdays">
+        {WEEK_DAYS.map((w) => (
+          <span key={w}>{w}</span>
+        ))}
+      </div>
+      <div className="cs-duty-cal-grid">
+        {padCells.map((_, idx) => (
+          <span key={`p-${idx}`} className="cs-duty-cal-cell cs-duty-cal-muted" />
+        ))}
+        {dayCells.map((day) => {
+          const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const isEndpoint = key === value?.start || key === value?.end;
+          const inRange = value?.start && value?.end && key > value.start && key < value.end;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`cs-duty-cal-cell cs-duty-cal-day${isEndpoint ? " is-selected" : ""}${inRange ? " is-range" : ""}`}
+              style={isEndpoint ? { background: accent, borderColor: accent, color: "#fff" } : undefined}
+              onClick={() => selectDay(day)}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+      <p className="cs-duty-cal-hint">Click the start date, then click the end date. Selecting again starts a new range.</p>
+    </div>
+  );
+}
+
 const Chargesheet = () => {
   const [staff, setStaff] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
@@ -346,6 +485,10 @@ const Chargesheet = () => {
   const selectedExam = useMemo(
     () => EXAM_OPTIONS.find((o) => o.key === form.examKey) || EXAM_OPTIONS[0],
     [form.examKey]
+  );
+  const selectedExamRange = useMemo(
+    () => ({ start: form.examStartDate || "", end: form.examEndDate || "" }),
+    [form.examStartDate, form.examEndDate]
   );
 
   const dutyDateBounds = useMemo(
@@ -438,11 +581,14 @@ const Chargesheet = () => {
     const { name, value } = e.target;
     if (name === "examKey") {
       const nextExam = EXAM_OPTIONS.find((o) => o.key === value) || EXAM_OPTIONS[0];
+      const range = examRangeFor(nextExam);
       setForm((p) => ({
         ...p,
         examKey: value,
-        examPeriod: nextExam.period,
-        examMonth: nextExam.month,
+        examStartDate: range.start,
+        examEndDate: range.end,
+        examPeriod: examPeriodText(range, nextExam.period),
+        examMonth: monthLabelFromDateKey(range.start, nextExam.month),
         courseKey: "",
         courseCode: "",
         courseTitle: "",
@@ -450,6 +596,23 @@ const Chargesheet = () => {
     } else {
       setForm((p) => ({ ...p, [name]: value }));
     }
+    setError("");
+    setSaved(false);
+  };
+
+  const handleExamRangeChange = (range) => {
+    setForm((p) => ({
+      ...p,
+      examStartDate: range.start || "",
+      examEndDate: range.end || "",
+      examPeriod: examPeriodText(range, selectedExam.period),
+      examMonth: monthLabelFromDateKey(range.start, selectedExam.month),
+    }));
+    if (range.start && range.end) {
+      saveStoredExamPeriod(selectedExam.key, range);
+    }
+    setDutyDateKeys([]);
+    setRelieverRoomsByDate({});
     setError("");
     setSaved(false);
   };
@@ -515,6 +678,10 @@ const Chargesheet = () => {
 
   const handleSubmit = async () => {
     if (!form.staffId) { setError("Please select a staff member before saving."); return; }
+    if (!form.examStartDate || !form.examEndDate) {
+      setError("Please select both start and end dates for the exam period.");
+      return;
+    }
     const teachingWorkload =
       Number(form.paperSets || 0) > 0 || Number(form.assessments || 0) > 0;
     if (
@@ -1063,6 +1230,15 @@ const Chargesheet = () => {
           border-color: transparent;
           box-shadow: 0 4px 12px rgba(99,102,241,.35);
         }
+        .cs-duty-cal-day.is-range {
+          background: #dbeafe;
+          border-color: #bfdbfe;
+          color: #1e3a8a;
+        }
+        .cs-range-cal {
+          margin-top: 12px;
+          background: rgba(255,255,255,.72);
+        }
         .cs-duty-cal-hint {
           margin-top: 12px;
           font-size: 11px;
@@ -1354,19 +1530,13 @@ const Chargesheet = () => {
                   }}
                 >
                   <span className="cs-info-tile-label" style={{ color: selectedExam.color }}>Exam Period</span>
-                  <input
-                    className="cs-inline-edit"
-                    name="examPeriod"
-                    value={form.examPeriod}
-                    onChange={handleChange}
-                    placeholder="05/01/2026 to 19/01/2026"
-                  />
-                  <input
-                    className="cs-inline-edit small"
-                    name="examMonth"
-                    value={form.examMonth}
-                    onChange={handleChange}
-                    placeholder="January 2026"
+                  <span className="cs-info-tile-val">{form.examPeriod || "Select start and end date"}</span>
+                  <span className="cs-info-tile-sub" style={{ color: "#64748b" }}>{form.examMonth}</span>
+                  <ExamPeriodRangeCalendar
+                    value={selectedExamRange}
+                    onChange={handleExamRangeChange}
+                    accent={selectedExam.color}
+                    fallbackMonth={selectedExam.month}
                   />
                 </div>
               </div>
