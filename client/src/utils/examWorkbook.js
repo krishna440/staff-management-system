@@ -865,6 +865,7 @@ function zip(entries) {
   const fileRecords = [];
   const centralRecords = [];
   let offset = 0;
+  const { time, date } = zipDosDateTime(new Date());
 
   entries.forEach((entry) => {
     const nameBytes = encoder.encode(entry.name);
@@ -878,8 +879,8 @@ function zip(entries) {
     localView.setUint16(4, 10, true);
     localView.setUint16(6, 0, true);
     localView.setUint16(8, 0, true);
-    localView.setUint16(10, 0, true);
-    localView.setUint16(12, 0, true);
+    localView.setUint16(10, time, true);
+    localView.setUint16(12, date, true);
     localView.setUint32(14, crc, true);
     localView.setUint32(18, dataBytes.length, true);
     localView.setUint32(22, dataBytes.length, true);
@@ -894,8 +895,8 @@ function zip(entries) {
     centralView.setUint16(6, 10, true);
     centralView.setUint16(8, 0, true);
     centralView.setUint16(10, 0, true);
-    centralView.setUint16(12, 0, true);
-    centralView.setUint16(14, 0, true);
+    centralView.setUint16(12, time, true);
+    centralView.setUint16(14, date, true);
     centralView.setUint32(16, crc, true);
     centralView.setUint32(20, dataBytes.length, true);
     centralView.setUint32(24, dataBytes.length, true);
@@ -925,6 +926,20 @@ function zip(entries) {
   endView.setUint32(16, offset, true);
 
   return concatUint8([...fileRecords, ...centralRecords, end]);
+}
+
+function zipDosDateTime(value) {
+  const year = Math.max(1980, value.getFullYear());
+  const month = value.getMonth() + 1;
+  const day = value.getDate();
+  const hours = value.getHours();
+  const minutes = value.getMinutes();
+  const seconds = Math.floor(value.getSeconds() / 2);
+
+  return {
+    time: (hours << 11) | (minutes << 5) | seconds,
+    date: ((year - 1980) << 9) | (month << 5) | day,
+  };
 }
 
 function concatUint8(parts) {
