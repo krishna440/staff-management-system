@@ -326,11 +326,11 @@ function DutyExamCalendar({ value, onChange, accent, bounds }) {
     <div className="cs-duty-cal">
       <div className="cs-duty-cal-head">
         <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(-1)} aria-label="Previous month">
-          ‹
+          &lt;
         </button>
         <span className="cs-duty-cal-title">{monthMeta.monthLabel}</span>
         <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(1)} aria-label="Next month">
-          ›
+          &gt;
         </button>
       </div>
       <div className="cs-duty-cal-weekdays">
@@ -416,11 +416,11 @@ function ExamPeriodRangeCalendar({ value, onChange, accent, fallbackMonth }) {
     <div className="cs-duty-cal cs-range-cal">
       <div className="cs-duty-cal-head">
         <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(-1)} aria-label="Previous month">
-          â€¹
+          &lt;
         </button>
         <span className="cs-duty-cal-title">{monthMeta.monthLabel}</span>
         <button type="button" className="cs-duty-cal-nav" onClick={() => shiftMonth(1)} aria-label="Next month">
-          â€º
+          &gt;
         </button>
       </div>
       <div className="cs-duty-cal-weekdays">
@@ -457,7 +457,7 @@ function ExamPeriodRangeCalendar({ value, onChange, accent, fallbackMonth }) {
 const Chargesheet = () => {
   const [staff, setStaff] = useState([]);
   const [loadingStaff, setLoadingStaff] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);  
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState(() => emptyChargeForm());
