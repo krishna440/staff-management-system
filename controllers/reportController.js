@@ -17,13 +17,49 @@ function paperSettingAmountForEntry(entry) {
   return (Number(entry.paperSets) || 0) * (Number(entry.paperSetRate) || 0);
 }
 
+function isRelieverEntry(entry) {
+  return String(entry.dutyRole || "").trim().toLowerCase() === "reliever";
+}
+
+function relieverSessionCountForEntry(entry) {
+  if (Number.isFinite(Number(entry.relieverSessionCount)) && Number(entry.relieverSessionCount) > 0) {
+    return Number(entry.relieverSessionCount);
+  }
+
+  if (Array.isArray(entry.relieverAssignments)) {
+    return entry.relieverAssignments.reduce(
+      (total, assignment) => total + (Array.isArray(assignment.rooms) ? assignment.rooms.length : 0),
+      0
+    );
+  }
+
+  return 0;
+}
+
+function payableDutyDaysForEntry(entry) {
+  if (isRelieverEntry(entry)) {
+    const sessions = relieverSessionCountForEntry(entry);
+    if (sessions > 0) return sessions / 2;
+  }
+
+  if (Number.isFinite(Number(entry.payableDutyDays)) && Number(entry.payableDutyDays) > 0) {
+    return Number(entry.payableDutyDays);
+  }
+
+  return Number(entry.dutyDays) || 0;
+}
+
+function dutyAmountForEntry(entry) {
+  return payableDutyDaysForEntry(entry) * (Number(entry.dutyRate) || 0);
+}
+
 function totalAmountForEntry(entry) {
   return (
     paperSettingAmountForEntry(entry) +
     assessmentAmountForEntry(entry) +
     (Number(entry.examConduction) || 0) +
     (Number(entry.invigilation) || 0) +
-    (Number(entry.dutyDays) || 0) * (Number(entry.dutyRate) || 0)
+    dutyAmountForEntry(entry)
   );
 }
 
@@ -99,6 +135,14 @@ exports.generateReport = async (req, res) => {
         assessmentRate: cs.assessmentRate || 0,
         examConduction: cs.examConduction || 0,
         invigilation: cs.invigilation || 0,
+        dutyRole: cs.dutyRole || "",
+        dutyDates: cs.dutyDates || "",
+        dutyDays: cs.dutyDays || 0,
+        dutyRate: cs.dutyRate || 0,
+        dutyAmount: dutyAmountForEntry(cs),
+        payableDutyDays: payableDutyDaysForEntry(cs),
+        relieverAssignments: cs.relieverAssignments || [],
+        relieverSessionCount: relieverSessionCountForEntry(cs),
         taskCount:
           Number(cs.paperSets || 0) +
           Number(cs.assessments || 0) +

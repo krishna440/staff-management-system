@@ -26,6 +26,36 @@ function isConductionDuty(row) {
   return role.includes("hod") || role.includes("coordinator");
 }
 
+function isRelieverDuty(row) {
+  return String(row.dutyRole || "").trim().toLowerCase() === "reliever";
+}
+
+function relieverSessionCount(row) {
+  const stored = Number(row.relieverSessionCount || 0);
+  if (stored > 0) return stored;
+
+  if (Array.isArray(row.relieverAssignments)) {
+    return row.relieverAssignments.reduce(
+      (total, assignment) => total + (Array.isArray(assignment.rooms) ? assignment.rooms.length : 0),
+      0
+    );
+  }
+
+  return 0;
+}
+
+function payableDutyDays(row) {
+  if (isRelieverDuty(row)) {
+    const sessions = relieverSessionCount(row);
+    if (sessions > 0) return sessions / 2;
+  }
+
+  const stored = Number(row.payableDutyDays || 0);
+  if (stored > 0) return stored;
+
+  return Number(row.dutyDays || 0);
+}
+
 function hasTeachingExamWork(row) {
   return Number(row.paperSets || 0) > 0 || Number(row.assessments || 0) > 0;
 }
@@ -469,7 +499,7 @@ function supportItemsForRow(row, exam) {
       name: `${isConductionDuty(row) ? "Exam Conduction" : row.dutyRole || "Exam Duty"} - ${row.staffName || ""}`,
       rate: Number(row.dutyRate || 0),
       dates: row.dutyDates || row.examPeriod || exam.period,
-      days: Number(row.dutyDays || 0),
+      days: payableDutyDays(row),
       amount: calculatedDuty,
     });
   }
@@ -581,7 +611,7 @@ function hasDuty(row) {
 function dutyAmount(row) {
   const stored = Number(row.dutyAmount || 0);
   if (stored > 0) return stored;
-  return Number(row.dutyDays || 0) * Number(row.dutyRate || 0);
+  return payableDutyDays(row) * Number(row.dutyRate || 0);
 }
 
 function isTeaching(row) {

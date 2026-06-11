@@ -18,24 +18,62 @@ function paperSettingAmountForEntry(entry) {
   return (Number(entry.paperSets) || 0) * (Number(entry.paperSetRate) || 0);
 }
 
+function isRelieverEntry(entry) {
+  return String(entry.dutyRole || "").trim().toLowerCase() === "reliever";
+}
+
+function relieverSessionCountForEntry(entry) {
+  if (Number.isFinite(Number(entry.relieverSessionCount)) && Number(entry.relieverSessionCount) > 0) {
+    return Number(entry.relieverSessionCount);
+  }
+
+  if (Array.isArray(entry.relieverAssignments)) {
+    return entry.relieverAssignments.reduce(
+      (total, assignment) => total + (Array.isArray(assignment.rooms) ? assignment.rooms.length : 0),
+      0
+    );
+  }
+
+  return 0;
+}
+
+function payableDutyDaysForEntry(entry) {
+  if (isRelieverEntry(entry)) {
+    const sessions = relieverSessionCountForEntry(entry);
+    if (sessions > 0) return sessions / 2;
+  }
+
+  if (Number.isFinite(Number(entry.payableDutyDays)) && Number(entry.payableDutyDays) > 0) {
+    return Number(entry.payableDutyDays);
+  }
+
+  return Number(entry.dutyDays) || 0;
+}
+
+function dutyAmountForEntry(entry) {
+  return payableDutyDaysForEntry(entry) * (Number(entry.dutyRate) || 0);
+}
+
 function totalAmountForEntry(entry) {
   return (
     paperSettingAmountForEntry(entry) +
     assessmentAmountForEntry(entry) +
     (Number(entry.examConduction) || 0) +
     (Number(entry.invigilation) || 0) +
-    (Number(entry.dutyDays) || 0) * (Number(entry.dutyRate) || 0)
+    dutyAmountForEntry(entry)
   );
 }
 
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
-    const dutyAmount = (Number(data.dutyDays) || 0) * (Number(data.dutyRate) || 0);
+    const payableDutyDays = payableDutyDaysForEntry(data);
+    const dutyAmount = dutyAmountForEntry({ ...data, payableDutyDays });
     const total = totalAmountForEntry(data);
 
     const newEntry = new Chargesheet({
       ...data,
+      payableDutyDays,
       dutyAmount,
       total,
       status: "Pending",
@@ -96,6 +134,8 @@ router.put("/:id", async (req, res) => {
       "invigilation",
       "dutyDays",
       "dutyRate",
+      "relieverSessionCount",
+      "payableDutyDays",
     ].forEach((field) => {
       if (Object.prototype.hasOwnProperty.call(updates, field)) {
         updates[field] = Number(updates[field]) || 0;
@@ -103,8 +143,9 @@ router.put("/:id", async (req, res) => {
     });
 
     Object.assign(existing, updates);
+    existing.payableDutyDays = payableDutyDaysForEntry(existing);
     existing.total = totalAmountForEntry(existing);
-    existing.dutyAmount = (Number(existing.dutyDays) || 0) * (Number(existing.dutyRate) || 0);
+    existing.dutyAmount = dutyAmountForEntry(existing);
 
     await existing.save();
     res.json(existing);

@@ -35,6 +35,14 @@ const chargesheetSchema = new mongoose.Schema({
   dutyDays: Number,
   dutyRate: Number,
   dutyAmount: Number,
+  relieverAssignments: [
+    {
+      date: String,
+      rooms: [String],
+    },
+  ],
+  relieverSessionCount: Number,
+  payableDutyDays: Number,
 
   total: Number,
   status: {

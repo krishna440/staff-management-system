@@ -38,6 +38,20 @@ function paperSettingAmountForEntry(entry) {
   return Number(entry?.paperSets || 0) * Number(entry?.paperSetRate || 0);
 }
 
+function dutyAmountForEntry(entry) {
+  const stored = Number(entry?.dutyAmount || 0);
+  if (stored > 0) return stored;
+
+  const role = String(entry?.dutyRole || "").trim().toLowerCase();
+  if (role === "reliever") {
+    const sessions = Number(entry?.relieverSessionCount || 0);
+    if (sessions > 0) return (sessions / 2) * Number(entry?.dutyRate || 0);
+  }
+
+  const payableDays = Number(entry?.payableDutyDays || entry?.dutyDays || 0);
+  return payableDays * Number(entry?.dutyRate || 0);
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem("user") || "null");
@@ -149,6 +163,13 @@ const Dashboard = () => {
       assessmentRate: Number(entry.assessmentRate || loadTaskRates().assessmentPerPaper),
       examConduction: Number(entry.examConduction || 0),
       invigilation: Number(entry.invigilation || 0),
+      dutyRole: entry.dutyRole || "",
+      dutyDays: Number(entry.dutyDays || 0),
+      dutyRate: Number(entry.dutyRate || 0),
+      dutyAmount: Number(entry.dutyAmount || 0),
+      payableDutyDays: Number(entry.payableDutyDays || 0),
+      relieverSessionCount: Number(entry.relieverSessionCount || 0),
+      relieverAssignments: entry.relieverAssignments || [],
       status: entry.status || "Pending",
     });
     setError(null);
@@ -162,7 +183,8 @@ const Dashboard = () => {
     paperSettingAmountForEntry(entry) +
     assessmentAmountForEntry(entry) +
     Number(entry?.examConduction || 0) +
-    Number(entry?.invigilation || 0);
+    Number(entry?.invigilation || 0) +
+    dutyAmountForEntry(entry);
 
   const refreshEntryData = async () => {
     await fetchReport();

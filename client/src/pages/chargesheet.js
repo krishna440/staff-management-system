@@ -145,6 +145,8 @@ const STATIC_FORM_FIELDS = {
   dutyRate: 0,
 };
 
+const RELIEVER_ROOMS = ["AL301", "AL207"];
+
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry.assessments || 0);
   const amount = assessments * Number(entry.assessmentRate || 0);
@@ -324,6 +326,7 @@ const Chargesheet = () => {
   const [subjectCatalog, setSubjectCatalog] = useState(() => loadSubjectCatalog(COURSE_CATALOG));
   const navigate = useNavigate();
   const [dutyDateKeys, setDutyDateKeys] = useState([]);
+  const [relieverRoomsByDate, setRelieverRoomsByDate] = useState({});
 
   const dutySortedKeys = useMemo(() => [...dutyDateKeys].sort(), [dutyDateKeys]);
   const dutyDatesJoined = useMemo(
@@ -338,6 +341,7 @@ const Chargesheet = () => {
     () => dutyRoleOptions.find((o) => o.label === form.dutyRole),
     [dutyRoleOptions, form.dutyRole]
   );
+  const isRelieverDuty = selectedDutyRole?.key === "reliever";
 
   const selectedExam = useMemo(
     () => EXAM_OPTIONS.find((o) => o.key === form.examKey) || EXAM_OPTIONS[0],
@@ -376,6 +380,15 @@ const Chargesheet = () => {
     const maxKey = dateKeyFromDate(dutyDateBounds.end);
     setDutyDateKeys((prev) => prev.filter((key) => key >= minKey && key <= maxKey));
   }, [dutyDateBounds]);
+
+  useEffect(() => {
+    setRelieverRoomsByDate((prev) => {
+      const selected = new Set(dutyDateKeys);
+      return Object.fromEntries(
+        Object.entries(prev).filter(([dateKey]) => selected.has(dateKey))
+      );
+    });
+  }, [dutyDateKeys]);
 
   useEffect(() => {
     const syncSubjects = () => setSubjectCatalog(loadSubjectCatalog(COURSE_CATALOG));
@@ -479,6 +492,27 @@ const Chargesheet = () => {
     setSaved(false);
   };
 
+  const toggleRelieverRoom = (dateKey, room) => {
+    setRelieverRoomsByDate((prev) => {
+      const rooms = new Set(prev[dateKey] || []);
+      if (rooms.has(room)) {
+        rooms.delete(room);
+      } else {
+        rooms.add(room);
+      }
+
+      const next = { ...prev };
+      if (rooms.size) {
+        next[dateKey] = Array.from(rooms);
+      } else {
+        delete next[dateKey];
+      }
+      return next;
+    });
+    setSaved(false);
+    setError("");
+  };
+
   const handleSubmit = async () => {
     if (!form.staffId) { setError("Please select a staff member before saving."); return; }
     const teachingWorkload =
@@ -491,6 +525,16 @@ const Chargesheet = () => {
       setError("Please select a subject when entering paper setting or assessment amounts.");
       return;
     }
+    if (isRelieverDuty) {
+      if (relieverSessionCount === 0) {
+        setError("Please select at least one classroom for reliever duty.");
+        return;
+      }
+      if (relieverSessionCount % 2 !== 0) {
+        setError("Reliever classroom selections must be even because 2 reliever sessions = 1 paid day.");
+        return;
+      }
+    }
     try {
       setSaving(true);
       setError("");
@@ -498,6 +542,9 @@ const Chargesheet = () => {
         ...form,
         dutyDates: dutyDatesJoined,
         dutyDays: dutyDaysFromCalendar,
+        payableDutyDays,
+        relieverAssignments: isRelieverDuty ? relieverAssignments : [],
+        relieverSessionCount: isRelieverDuty ? relieverSessionCount : 0,
         paperSets: isLabCourse ? 0 : form.paperSets,
         academicYear: selectedExam.academicYear,
         semester: selectedExam.semester,
@@ -519,6 +566,7 @@ const Chargesheet = () => {
   const handleReset = () => {
     setForm(emptyChargeForm());
     setDutyDateKeys([]);
+    setRelieverRoomsByDate({});
     setSaved(false);
     setError("");
   };
@@ -530,6 +578,7 @@ const Chargesheet = () => {
       dutyRole: opt?.label || "",
       dutyRate: opt ? opt.rate : 0,
     }));
+    if (opt?.key !== "reliever") setRelieverRoomsByDate({});
     setSaved(false);
     setError("");
   };
@@ -544,7 +593,18 @@ const Chargesheet = () => {
     ...form,
     examType: selectedExam.examType,
   });
-  const dutyAmount = dutyDaysFromCalendar * Number(form.dutyRate || 0);
+  const relieverAssignments = dutySortedKeys
+    .map((dateKey) => ({
+      date: formatDdMmYyyyFromKey(dateKey),
+      rooms: relieverRoomsByDate[dateKey] || [],
+    }))
+    .filter((assignment) => assignment.rooms.length > 0);
+  const relieverSessionCount = relieverAssignments.reduce(
+    (total, assignment) => total + assignment.rooms.length,
+    0
+  );
+  const payableDutyDays = isRelieverDuty ? relieverSessionCount / 2 : dutyDaysFromCalendar;
+  const dutyAmount = payableDutyDays * Number(form.dutyRate || 0);
   const grandTotal = paperAmt + assessmentAmt + Number(form.examConduction || 0) + Number(form.invigilation || 0) + dutyAmount;
 
   const completionPercent = useMemo(() => {
@@ -1034,6 +1094,30 @@ const Chargesheet = () => {
           padding: 4px 0;
         }
         .cs-duty-clear-dates:hover { text-decoration: underline; }
+        .cs-reliever-room-box {
+          margin-top: 12px; border: 1px solid #dbeafe; border-radius: 12px;
+          background: #f8fbff; padding: 12px;
+        }
+        .cs-reliever-room-head {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; font-size: 12px; font-weight: 800; color: #1e3a8a;
+          margin-bottom: 10px;
+        }
+        .cs-reliever-room-head strong { color: #0f172a; }
+        .cs-reliever-room-list { display: grid; gap: 8px; }
+        .cs-reliever-room-row {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; padding: 9px 10px; border-radius: 10px; background: #fff;
+          border: 1px solid #e2e8f0; font-size: 12px; font-weight: 800;
+        }
+        .cs-reliever-room-row > span { color: #334155; }
+        .cs-reliever-room-row > div { display: flex; flex-wrap: wrap; gap: 8px; }
+        .cs-reliever-room-choice {
+          display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px;
+          border-radius: 999px; border: 1px solid #cbd5e1; color: #0f172a;
+          cursor: pointer; background: #f8fafc;
+        }
+        .cs-reliever-room-choice input { accent-color: #2563eb; }
 
         /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SUMMARY CARD ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
         .cs-summary { position: sticky; top: 88px; }
@@ -1467,13 +1551,13 @@ const Chargesheet = () => {
                     </div>
                   </div>
                   <div className="cs-field">
-                    <label className="cs-label">Total days</label>
+                    <label className="cs-label">{isRelieverDuty ? "Payable days" : "Total days"}</label>
                     <input
                       className="cs-input"
                       name="dutyDays"
                       type="number"
                       readOnly
-                      value={dutyDateKeys.length}
+                      value={payableDutyDays}
                     />
                   </div>
                   <div className="cs-duty-total">
@@ -1491,12 +1575,43 @@ const Chargesheet = () => {
                   <div className="cs-duty-dates-readout">
                     {dutyDatesJoined.trim() ? dutyDatesJoined : "No dates selected yet."}
                   </div>
+                  {isRelieverDuty && dutySortedKeys.length > 0 && (
+                    <div className="cs-reliever-room-box">
+                      <div className="cs-reliever-room-head">
+                        <span>Reliever classrooms</span>
+                        <strong>{relieverSessionCount} sessions = {fmt(payableDutyDays)} paid days</strong>
+                      </div>
+                      <div className="cs-reliever-room-list">
+                        {dutySortedKeys.map((dateKey) => (
+                          <div key={dateKey} className="cs-reliever-room-row">
+                            <span>{formatDdMmYyyyFromKey(dateKey)}</span>
+                            <div>
+                              {RELIEVER_ROOMS.map((room) => (
+                                <label key={room} className="cs-reliever-room-choice">
+                                  <input
+                                    type="checkbox"
+                                    checked={(relieverRoomsByDate[dateKey] || []).includes(room)}
+                                    onChange={() => toggleRelieverRoom(dateKey, room)}
+                                  />
+                                  {room}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="cs-duty-cal-hint">
+                        Select one classroom for a half-day reliever duty, or both classrooms for one full paid day.
+                      </p>
+                    </div>
+                  )}
                   {dutyDateKeys.length > 0 && (
                     <button
                       type="button"
                       className="cs-duty-clear-dates"
                       onClick={() => {
                         setDutyDateKeys([]);
+                        setRelieverRoomsByDate({});
                         setSaved(false);
                       }}
                     >
