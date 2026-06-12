@@ -551,10 +551,14 @@ function commonHeadingRows(exam, columnCount, rowsForExam = []) {
 }
 
 function statementText(exam, rowsForExam = []) {
-  const source = rowsForExam.find((row) => row.examPeriod || row.examMonth) || {};
+  const source = rowsForExam.find((row) => row.labExamPeriod || row.examPeriod || row.examMonth) || {};
   const month = source.examMonth || exam.month;
   const period = source.examPeriod || exam.period;
-  return `Statement showing the remuneration payable to staff engaged for the M.C.A. ${exam.examType} Examinations ${month} during the period from ${period}`;
+  const labPeriod = source.labExamPeriod || "";
+  const periodText = labPeriod
+    ? `${labPeriod} (Practical Exam) and ${period} (Theory Exam)`
+    : period;
+  return `Statement showing the remuneration payable to staff engaged for the M.C.A. ${exam.examType} Examinations ${month} during the period from ${periodText}`;
 }
 
 function addSignatureRows(rows, columnCount, labels = ["Department Exam Coordinator", "Head of Department", "Controller of Examination"]) {

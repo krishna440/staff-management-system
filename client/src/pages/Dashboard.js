@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import jsPDF from "jspdf";
@@ -12,6 +13,7 @@ const EXAM_MONTHS = [
   "May 2026","June 2026","July 2026","August 2026",
   "September 2026","October 2026","November 2026","December 2026",
 ];
+const DASHBOARD_MONTH_STORAGE_KEY = "mca_dashboard_selected_month_v1";
 
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry?.assessments || 0);
@@ -82,7 +84,9 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [chargesheets, setChargesheets] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(EXAM_MONTHS[0]);
+  const [selectedMonth, setSelectedMonth] = useState(
+    () => localStorage.getItem(DASHBOARD_MONTH_STORAGE_KEY) || EXAM_MONTHS[0]
+  );
   const [editingEntry, setEditingEntry] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [entrySaving, setEntrySaving] = useState(false);
@@ -142,7 +146,11 @@ const Dashboard = () => {
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => { if (!user) navigate("/login"); }, [user, navigate]);
   useEffect(() => { fetchReport(); fetchChargesheets(); }, []);
-  useEffect(() => { fetchReport(); fetchChargesheets(); }, [selectedMonth]);
+  useEffect(() => {
+    localStorage.setItem(DASHBOARD_MONTH_STORAGE_KEY, selectedMonth);
+    fetchReport();
+    fetchChargesheets();
+  }, [selectedMonth]);
 
   const fmt = (val) =>
     Number(val || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
@@ -396,6 +404,115 @@ const Dashboard = () => {
     doc.text("Page 1 of 1", pageWidth - 14, pageHeight - 5, { align: "right" });
     doc.save("MCA_Chargesheet.pdf");
   };
+
+  const editModal = editingEntry && editForm ? createPortal(
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal">
+        <div className="modal-head">
+          <div>
+            <div className="modal-title">
+              {entryEditKind(editingEntry) === "duty" ? "Edit Remuneration Duty" : "Edit Teaching Entry"}
+            </div>
+            <div className="modal-sub">
+              {editingEntry.staffName} - {editingEntry.examLabel || selectedMonth}
+              <br />
+              {entryRecordInfo(editingEntry)}
+            </div>
+          </div>
+          <button
+            className="cs-btn cs-btn-delete"
+            onClick={() => { setEditingEntry(null); setEditForm(null); }}
+          >
+            Close
+          </button>
+        </div>
+        <div className="modal-body">
+          {entryEditKind(editingEntry) === "duty" ? (
+            <div className="modal-grid">
+              <div className="modal-field">
+                <label>Duty Role</label>
+                <input value={editForm.dutyRole} onChange={(e) => updateEditField("dutyRole", e.target.value)} placeholder="Reliever / Lab Attendant / HOD" />
+              </div>
+              <div className="modal-field">
+                <label>Duty Dates</label>
+                <input value={editForm.dutyDates} onChange={(e) => updateEditField("dutyDates", e.target.value)} placeholder="Dates" />
+              </div>
+              <div className="modal-field">
+                <label>Total Days</label>
+                <input type="number" min="0" value={editForm.dutyDays} onChange={(e) => updateEditField("dutyDays", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Payable Days</label>
+                <input type="number" min="0" value={editForm.payableDutyDays} onChange={(e) => updateEditField("payableDutyDays", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Rate Per Session</label>
+                <input type="number" min="0" value={editForm.dutyRate} onChange={(e) => updateEditField("dutyRate", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Reliever Sessions</label>
+                <input type="number" min="0" value={editForm.relieverSessionCount} onChange={(e) => updateEditField("relieverSessionCount", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Status</label>
+                <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
+                  <option>Pending</option>
+                  <option>In Review</option>
+                  <option>Submitted</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="modal-grid">
+              <div className="modal-field">
+                <label>Course Code</label>
+                <input value={editForm.courseCode} onChange={(e) => updateEditField("courseCode", e.target.value)} placeholder="Course code" />
+              </div>
+              <div className="modal-field">
+                <label>Course Title</label>
+                <input value={editForm.courseTitle} onChange={(e) => updateEditField("courseTitle", e.target.value)} placeholder="Course title" />
+              </div>
+              <div className="modal-field">
+                <label>Paper Sets</label>
+                <input type="number" min="0" value={editForm.paperSets} onChange={(e) => updateEditField("paperSets", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Paper Set Rate</label>
+                <input type="number" min="0" value={editForm.paperSetRate} onChange={(e) => updateEditField("paperSetRate", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Assessments</label>
+                <input type="number" min="0" value={editForm.assessments} onChange={(e) => updateEditField("assessments", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Assessment Rate</label>
+                <input type="number" min="0" value={editForm.assessmentRate} onChange={(e) => updateEditField("assessmentRate", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Status</label>
+                <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
+                  <option>Pending</option>
+                  <option>In Review</option>
+                  <option>Submitted</option>
+                </select>
+              </div>
+            </div>
+          )}
+          <div className="modal-total">
+            <span className="modal-total-label">Updated Total</span>
+            <span className="modal-total-value">Rs. {fmt(editTotal())}</span>
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button className="modal-cancel" onClick={() => { setEditingEntry(null); setEditForm(null); }}>Cancel</button>
+          <button className="modal-save" onClick={saveEditedEntry} disabled={entrySaving}>
+            {entrySaving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null;
 
   return (
     <>
@@ -1062,114 +1179,7 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {/* Edit Modal */}
-                {editingEntry && editForm && (
-                  <div className="modal-backdrop">
-                    <div className="modal">
-                      <div className="modal-head">
-                        <div>
-                          <div className="modal-title">
-                            {entryEditKind(editingEntry) === "duty" ? "Edit Remuneration Duty" : "Edit Teaching Entry"}
-                          </div>
-                          <div className="modal-sub">
-                            {editingEntry.staffName} - {editingEntry.examLabel || selectedMonth}
-                            <br />
-                            {entryRecordInfo(editingEntry)}
-                          </div>
-                        </div>
-                        <button
-                          className="cs-btn cs-btn-delete"
-                          onClick={() => { setEditingEntry(null); setEditForm(null); }}
-                        >
-                          Close
-                        </button>
-                      </div>
-                      <div className="modal-body">
-                        {entryEditKind(editingEntry) === "duty" ? (
-                          <div className="modal-grid">
-                            <div className="modal-field">
-                              <label>Duty Role</label>
-                              <input value={editForm.dutyRole} onChange={(e) => updateEditField("dutyRole", e.target.value)} placeholder="Reliever / Lab Attendant / HOD" />
-                            </div>
-                            <div className="modal-field">
-                              <label>Duty Dates</label>
-                              <input value={editForm.dutyDates} onChange={(e) => updateEditField("dutyDates", e.target.value)} placeholder="Dates" />
-                            </div>
-                            <div className="modal-field">
-                              <label>Total Days</label>
-                              <input type="number" min="0" value={editForm.dutyDays} onChange={(e) => updateEditField("dutyDays", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Payable Days</label>
-                              <input type="number" min="0" value={editForm.payableDutyDays} onChange={(e) => updateEditField("payableDutyDays", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Rate Per Session</label>
-                              <input type="number" min="0" value={editForm.dutyRate} onChange={(e) => updateEditField("dutyRate", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Reliever Sessions</label>
-                              <input type="number" min="0" value={editForm.relieverSessionCount} onChange={(e) => updateEditField("relieverSessionCount", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Status</label>
-                              <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
-                                <option>Pending</option>
-                                <option>In Review</option>
-                                <option>Submitted</option>
-                              </select>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="modal-grid">
-                            <div className="modal-field">
-                              <label>Course Code</label>
-                              <input value={editForm.courseCode} onChange={(e) => updateEditField("courseCode", e.target.value)} placeholder="Course code" />
-                            </div>
-                            <div className="modal-field">
-                              <label>Course Title</label>
-                              <input value={editForm.courseTitle} onChange={(e) => updateEditField("courseTitle", e.target.value)} placeholder="Course title" />
-                            </div>
-                            <div className="modal-field">
-                              <label>Paper Sets</label>
-                              <input type="number" min="0" value={editForm.paperSets} onChange={(e) => updateEditField("paperSets", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Paper Set Rate</label>
-                              <input type="number" min="0" value={editForm.paperSetRate} onChange={(e) => updateEditField("paperSetRate", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Assessments</label>
-                              <input type="number" min="0" value={editForm.assessments} onChange={(e) => updateEditField("assessments", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Assessment Rate</label>
-                              <input type="number" min="0" value={editForm.assessmentRate} onChange={(e) => updateEditField("assessmentRate", e.target.value)} />
-                            </div>
-                            <div className="modal-field">
-                              <label>Status</label>
-                              <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
-                                <option>Pending</option>
-                                <option>In Review</option>
-                                <option>Submitted</option>
-                              </select>
-                            </div>
-                          </div>
-                        )}
-                        <div className="modal-total">
-                          <span className="modal-total-label">Updated Total</span>
-                          <span className="modal-total-value">Rs. {fmt(editTotal())}</span>
-                        </div>
-                      </div>
-                      <div className="modal-actions">
-                        <button className="modal-cancel" onClick={() => { setEditingEntry(null); setEditForm(null); }}>Cancel</button>
-                        <button className="modal-save" onClick={saveEditedEntry} disabled={entrySaving}>
-                          {entrySaving ? "Saving…" : "Save Changes"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {editModal}
               </>
             )}
           </div>

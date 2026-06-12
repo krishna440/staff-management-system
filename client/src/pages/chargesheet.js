@@ -147,6 +147,7 @@ const STATIC_FORM_FIELDS = {
 
 const RELIEVER_ROOMS = ["AL301", "AL207"];
 const EXAM_PERIOD_STORAGE_KEY = "mca_exam_period_ranges_v1";
+const LAB_EXAM_PERIOD_STORAGE_KEY = "mca_lab_exam_period_ranges_v1";
 
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry.assessments || 0);
@@ -164,6 +165,7 @@ function paperSettingAmountForEntry(entry) {
 function emptyChargeForm() {
   const first = EXAM_OPTIONS[0];
   const range = examRangeFor(first);
+  const labRange = labExamRangeFor(first);
   return {
     ...STATIC_FORM_FIELDS,
     examKey: first.key,
@@ -171,6 +173,9 @@ function emptyChargeForm() {
     examEndDate: range.end,
     examPeriod: examPeriodText(range, first.period),
     examMonth: monthLabelFromDateKey(range.start, first.month),
+    labExamStartDate: labRange.start,
+    labExamEndDate: labRange.end,
+    labExamPeriod: examPeriodText(labRange, ""),
     ...teachingRateDefaults(),
   };
 }
@@ -251,6 +256,21 @@ function saveStoredExamPeriod(examKey, range) {
   localStorage.setItem(EXAM_PERIOD_STORAGE_KEY, JSON.stringify(stored));
 }
 
+function loadStoredLabExamPeriods() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LAB_EXAM_PERIOD_STORAGE_KEY) || "{}");
+    return stored && typeof stored === "object" ? stored : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredLabExamPeriod(examKey, range) {
+  const stored = loadStoredLabExamPeriods();
+  stored[examKey] = range;
+  localStorage.setItem(LAB_EXAM_PERIOD_STORAGE_KEY, JSON.stringify(stored));
+}
+
 function defaultExamRange(exam) {
   const bounds = examDateBounds(exam.period, exam.month);
   return {
@@ -263,6 +283,12 @@ function examRangeFor(exam) {
   const stored = loadStoredExamPeriods()[exam.key];
   if (stored?.start && stored?.end) return stored;
   return defaultExamRange(exam);
+}
+
+function labExamRangeFor(exam) {
+  const stored = loadStoredLabExamPeriods()[exam.key];
+  if (stored?.start && stored?.end) return stored;
+  return { start: "", end: "" };
 }
 
 function examPeriodText(range, fallback = "") {
@@ -490,6 +516,10 @@ const Chargesheet = () => {
     () => ({ start: form.examStartDate || "", end: form.examEndDate || "" }),
     [form.examStartDate, form.examEndDate]
   );
+  const selectedLabExamRange = useMemo(
+    () => ({ start: form.labExamStartDate || "", end: form.labExamEndDate || "" }),
+    [form.labExamStartDate, form.labExamEndDate]
+  );
 
   const dutyDateBounds = useMemo(
     () => examDateBounds(form.examPeriod || selectedExam.period, form.examMonth || selectedExam.month),
@@ -508,6 +538,7 @@ const Chargesheet = () => {
 
   const isLabCourse = selectedCourse?.kind === "lab";
   const [showExamPeriodPicker, setShowExamPeriodPicker] = useState(false);
+  const [showLabExamPeriodPicker, setShowLabExamPeriodPicker] = useState(false);
 
   useEffect(() => {
     fetchStaff();
@@ -578,6 +609,7 @@ const Chargesheet = () => {
     if (name === "examKey") {
       const nextExam = EXAM_OPTIONS.find((o) => o.key === value) || EXAM_OPTIONS[0];
       const range = examRangeFor(nextExam);
+      const labRange = labExamRangeFor(nextExam);
       setForm((p) => ({
         ...p,
         examKey: value,
@@ -585,11 +617,15 @@ const Chargesheet = () => {
         examEndDate: range.end,
         examPeriod: examPeriodText(range, nextExam.period),
         examMonth: monthLabelFromDateKey(range.start, nextExam.month),
+        labExamStartDate: labRange.start,
+        labExamEndDate: labRange.end,
+        labExamPeriod: examPeriodText(labRange, ""),
         courseKey: "",
         courseCode: "",
         courseTitle: "",
       }));
       setShowExamPeriodPicker(false);
+      setShowLabExamPeriodPicker(false);
     } else {
       setForm((p) => ({ ...p, [name]: value }));
     }
@@ -611,6 +647,21 @@ const Chargesheet = () => {
     }
     setDutyDateKeys([]);
     setRelieverRoomsByDate({});
+    setError("");
+    setSaved(false);
+  };
+
+  const handleLabExamRangeChange = (range) => {
+    setForm((p) => ({
+      ...p,
+      labExamStartDate: range.start || "",
+      labExamEndDate: range.end || "",
+      labExamPeriod: examPeriodText(range, ""),
+    }));
+    if (range.start && range.end) {
+      saveStoredLabExamPeriod(selectedExam.key, range);
+      setShowLabExamPeriodPicker(false);
+    }
     setError("");
     setSaved(false);
   };
@@ -716,6 +767,9 @@ const Chargesheet = () => {
         examType: selectedExam.examType,
         examMonth: form.examMonth || selectedExam.month,
         examPeriod: form.examPeriod || selectedExam.period,
+        labExamStartDate: form.labExamStartDate || "",
+        labExamEndDate: form.labExamEndDate || "",
+        labExamPeriod: form.labExamPeriod || "",
         examLabel: selectedExam.label,
         month: form.examMonth || selectedExam.month,
       });
@@ -732,6 +786,8 @@ const Chargesheet = () => {
     setForm(emptyChargeForm());
     setDutyDateKeys([]);
     setRelieverRoomsByDate({});
+    setShowExamPeriodPicker(false);
+    setShowLabExamPeriodPicker(false);
     setSaved(false);
     setError("");
   };
@@ -1568,6 +1624,35 @@ const Chargesheet = () => {
                       onChange={handleExamRangeChange}
                       accent={selectedExam.color}
                       fallbackMonth={selectedExam.month}
+                    />
+                  )}
+                </div>
+                <div
+                  className="cs-info-tile"
+                  style={{
+                    borderColor: "#10b98133",
+                    background: "#10b98108",
+                    gridColumn: "1 / -1",
+                  }}
+                >
+                  <span className="cs-info-tile-label" style={{ color: "#059669" }}>Lab / Practical Exam Period</span>
+                  <span className="cs-info-tile-val">{form.labExamPeriod || "Select practical exam start and end date"}</span>
+                  <span className="cs-info-tile-sub" style={{ color: "#64748b" }}>
+                    This is printed with the theory exam period on the generated sheet.
+                  </span>
+                  <button
+                    type="button"
+                    className="cs-period-toggle"
+                    onClick={() => setShowLabExamPeriodPicker((value) => !value)}
+                  >
+                    {showLabExamPeriodPicker ? "Hide calendar" : "Change lab dates"}
+                  </button>
+                  {showLabExamPeriodPicker && (
+                    <ExamPeriodRangeCalendar
+                      value={selectedLabExamRange}
+                      onChange={handleLabExamRangeChange}
+                      accent="#10b981"
+                      fallbackMonth={form.examMonth || selectedExam.month}
                     />
                   )}
                 </div>
