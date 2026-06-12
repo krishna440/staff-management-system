@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import jsPDF from "jspdf";
@@ -410,7 +409,7 @@ const Dashboard = () => {
     doc.save("MCA_Chargesheet.pdf");
   };
 
-  const editModal = editingEntry && editForm ? createPortal(
+  const editModal = editingEntry && editForm ? (
     <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal">
         <div className="modal-head">
@@ -425,6 +424,7 @@ const Dashboard = () => {
             </div>
           </div>
           <button
+            type="button"
             className="cs-btn cs-btn-delete"
             onClick={() => { setEditingEntry(null); setEditForm(null); }}
           >
@@ -538,14 +538,13 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="modal-actions">
-          <button className="modal-cancel" onClick={() => { setEditingEntry(null); setEditForm(null); }}>Cancel</button>
-          <button className="modal-save" onClick={saveEditedEntry} disabled={entrySaving}>
+          <button type="button" className="modal-cancel" onClick={() => { setEditingEntry(null); setEditForm(null); }}>Cancel</button>
+          <button type="button" className="modal-save" onClick={saveEditedEntry} disabled={entrySaving}>
             {entrySaving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   ) : null;
 
   return (
@@ -857,6 +856,7 @@ const Dashboard = () => {
         .modal-backdrop {
           position: fixed; inset: 0; background: rgba(15,23,42,0.58);
           z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 18px;
+          isolation: isolate;
         }
         .modal {
           width: min(920px, 100%); max-height: 92vh; overflow-y: auto;
@@ -927,6 +927,8 @@ const Dashboard = () => {
           .modal-total { align-items: flex-start; flex-direction: column; gap: 6px; }
         }
       `}</style>
+
+      {editModal}
 
       <div className={`shell ${sidebarCollapsed ? "sb-collapsed" : ""}`}>
         {/* ── SIDEBAR ───────────────────────── */}
@@ -1191,8 +1193,8 @@ const Dashboard = () => {
                           </div>
                           {canManageEntries && (
                             <div className="cs-actions">
-                              <button className="cs-btn cs-btn-edit" onClick={() => startEditEntry(cs)}>Edit</button>
-                              <button className="cs-btn cs-btn-delete" onClick={() => deleteEntry(cs)}>Delete</button>
+                              <button type="button" className="cs-btn cs-btn-edit" onClick={() => startEditEntry(cs)}>Edit</button>
+                              <button type="button" className="cs-btn cs-btn-delete" onClick={() => deleteEntry(cs)}>Delete</button>
                             </div>
                           )}
                         </div>
@@ -1220,8 +1222,8 @@ const Dashboard = () => {
                             </div>
                             {canManageEntries && (
                               <div className="cs-actions">
-                                <button className="cs-btn cs-btn-edit" onClick={() => startEditEntry(c)}>Edit</button>
-                                <button className="cs-btn cs-btn-delete" onClick={() => deleteEntry(c)}>Delete</button>
+                                <button type="button" className="cs-btn cs-btn-edit" onClick={() => startEditEntry(c)}>Edit</button>
+                                <button type="button" className="cs-btn cs-btn-delete" onClick={() => deleteEntry(c)}>Delete</button>
                               </div>
                             )}
                           </div>
@@ -1235,7 +1237,6 @@ const Dashboard = () => {
                   )}
                 </div>
 
-                {editModal}
               </>
             )}
           </div>
