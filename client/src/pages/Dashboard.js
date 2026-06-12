@@ -60,10 +60,6 @@ function isDutyWorkEntry(entry) {
   );
 }
 
-function entryEditKind(entry) {
-  return isDutyWorkEntry(entry) && !isTeachingWorkEntry(entry) ? "duty" : "teaching";
-}
-
 function entryRecordInfo(entry) {
   if (isDutyWorkEntry(entry) && !isTeachingWorkEntry(entry)) {
     const role = entry?.dutyRole || "Remuneration Duty";
@@ -190,6 +186,15 @@ const Dashboard = () => {
   };
 
   const updateEditField = (field, value) => setEditForm((prev) => ({ ...prev, [field]: value }));
+
+  const updateEditDutyRole = (value) => {
+    const duty = rateCfg.duties.find((item) => item.label === value);
+    setEditForm((prev) => ({
+      ...prev,
+      dutyRole: value,
+      ...(duty ? { dutyRate: duty.rate } : {}),
+    }));
+  };
 
   const editTotal = (entry = editForm) =>
     paperSettingAmountForEntry(entry) +
@@ -411,7 +416,7 @@ const Dashboard = () => {
         <div className="modal-head">
           <div>
             <div className="modal-title">
-              {entryEditKind(editingEntry) === "duty" ? "Edit Remuneration Duty" : "Edit Teaching Entry"}
+              Edit Chargesheet Entry
             </div>
             <div className="modal-sub">
               {editingEntry.staffName} - {editingEntry.examLabel || selectedMonth}
@@ -427,42 +432,11 @@ const Dashboard = () => {
           </button>
         </div>
         <div className="modal-body">
-          {entryEditKind(editingEntry) === "duty" ? (
-            <div className="modal-grid">
-              <div className="modal-field">
-                <label>Duty Role</label>
-                <input value={editForm.dutyRole} onChange={(e) => updateEditField("dutyRole", e.target.value)} placeholder="Reliever / Lab Attendant / HOD" />
-              </div>
-              <div className="modal-field">
-                <label>Duty Dates</label>
-                <input value={editForm.dutyDates} onChange={(e) => updateEditField("dutyDates", e.target.value)} placeholder="Dates" />
-              </div>
-              <div className="modal-field">
-                <label>Total Days</label>
-                <input type="number" min="0" value={editForm.dutyDays} onChange={(e) => updateEditField("dutyDays", e.target.value)} />
-              </div>
-              <div className="modal-field">
-                <label>Payable Days</label>
-                <input type="number" min="0" value={editForm.payableDutyDays} onChange={(e) => updateEditField("payableDutyDays", e.target.value)} />
-              </div>
-              <div className="modal-field">
-                <label>Rate Per Session</label>
-                <input type="number" min="0" value={editForm.dutyRate} onChange={(e) => updateEditField("dutyRate", e.target.value)} />
-              </div>
-              <div className="modal-field">
-                <label>Reliever Sessions</label>
-                <input type="number" min="0" value={editForm.relieverSessionCount} onChange={(e) => updateEditField("relieverSessionCount", e.target.value)} />
-              </div>
-              <div className="modal-field">
-                <label>Status</label>
-                <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
-                  <option>Pending</option>
-                  <option>In Review</option>
-                  <option>Submitted</option>
-                </select>
-              </div>
+          <div className="modal-section">
+            <div className="modal-section-head">
+              <span>Paper Setting / Assessment</span>
+              <small>Edit paper sets and assessed papers</small>
             </div>
-          ) : (
             <div className="modal-grid">
               <div className="modal-field">
                 <label>Course Code</label>
@@ -481,12 +455,72 @@ const Dashboard = () => {
                 <input type="number" min="0" value={editForm.paperSetRate} onChange={(e) => updateEditField("paperSetRate", e.target.value)} />
               </div>
               <div className="modal-field">
-                <label>Assessments</label>
+                <label>Papers Assessed</label>
                 <input type="number" min="0" value={editForm.assessments} onChange={(e) => updateEditField("assessments", e.target.value)} />
               </div>
               <div className="modal-field">
                 <label>Assessment Rate</label>
                 <input type="number" min="0" value={editForm.assessmentRate} onChange={(e) => updateEditField("assessmentRate", e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-section">
+            <div className="modal-section-head">
+              <span>Remuneration / Duty</span>
+              <small>Edit role, dates, sessions and amounts</small>
+            </div>
+            <div className="modal-grid">
+              <div className="modal-field">
+                <label>Duty Role</label>
+                <select value={editForm.dutyRole} onChange={(e) => updateEditDutyRole(e.target.value)}>
+                  <option value="">No duty / remuneration role</option>
+                  {rateCfg.duties.map((duty) => (
+                    <option key={duty.key} value={duty.label}>
+                      {duty.label} - Rs {duty.rate}/session
+                    </option>
+                  ))}
+                  {editForm.dutyRole && !rateCfg.duties.some((duty) => duty.label === editForm.dutyRole) && (
+                    <option value={editForm.dutyRole}>{editForm.dutyRole}</option>
+                  )}
+                </select>
+              </div>
+              <div className="modal-field">
+                <label>Duty Dates</label>
+                <input value={editForm.dutyDates} onChange={(e) => updateEditField("dutyDates", e.target.value)} placeholder="19.05.2026, 21.05.2026" />
+              </div>
+              <div className="modal-field">
+                <label>Total Days</label>
+                <input type="number" min="0" value={editForm.dutyDays} onChange={(e) => updateEditField("dutyDays", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Payable Days</label>
+                <input type="number" min="0" value={editForm.payableDutyDays} onChange={(e) => updateEditField("payableDutyDays", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Rate Per Session</label>
+                <input type="number" min="0" value={editForm.dutyRate} onChange={(e) => updateEditField("dutyRate", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Reliever Sessions</label>
+                <input type="number" min="0" value={editForm.relieverSessionCount} onChange={(e) => updateEditField("relieverSessionCount", e.target.value)} />
+              </div>
+            </div>
+          </div>
+
+          <div className="modal-section">
+            <div className="modal-section-head">
+              <span>Extra Amounts / Status</span>
+              <small>Edit any direct amount fields saved with this entry</small>
+            </div>
+            <div className="modal-grid">
+              <div className="modal-field">
+                <label>Exam Conduction Amount</label>
+                <input type="number" min="0" value={editForm.examConduction} onChange={(e) => updateEditField("examConduction", e.target.value)} />
+              </div>
+              <div className="modal-field">
+                <label>Invigilation Amount</label>
+                <input type="number" min="0" value={editForm.invigilation} onChange={(e) => updateEditField("invigilation", e.target.value)} />
               </div>
               <div className="modal-field">
                 <label>Status</label>
@@ -497,7 +531,7 @@ const Dashboard = () => {
                 </select>
               </div>
             </div>
-          )}
+          </div>
           <div className="modal-total">
             <span className="modal-total-label">Updated Total</span>
             <span className="modal-total-value">Rs. {fmt(editTotal())}</span>
@@ -821,11 +855,11 @@ const Dashboard = () => {
 
         /* Edit Modal */
         .modal-backdrop {
-          position: fixed; inset: 0; background: rgba(15,23,42,0.45);
-          z-index: 300; display: flex; align-items: center; justify-content: center; padding: 18px;
+          position: fixed; inset: 0; background: rgba(15,23,42,0.58);
+          z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 18px;
         }
         .modal {
-          width: min(700px, 100%); max-height: 92vh; overflow-y: auto;
+          width: min(920px, 100%); max-height: 92vh; overflow-y: auto;
           background: #fff; border-radius: 12px; border: 1px solid #e5e7eb;
           box-shadow: 0 20px 60px rgba(15,23,42,0.22);
         }
@@ -835,7 +869,24 @@ const Dashboard = () => {
         }
         .modal-title { font-size: 14.5px; font-weight: 700; color: #111827; }
         .modal-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
-        .modal-body { padding: 18px; }
+        .modal-body { padding: 18px; display: grid; gap: 14px; }
+        .modal-section {
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 14px;
+          background: #fff;
+        }
+        .modal-section-head {
+          display: flex; align-items: baseline; justify-content: space-between;
+          gap: 12px; margin-bottom: 12px;
+        }
+        .modal-section-head span {
+          font-size: 12px; font-weight: 800; color: #111827;
+          text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .modal-section-head small {
+          font-size: 11px; font-weight: 600; color: #9ca3af;
+        }
         .modal-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 13px; }
         .modal-field { display: flex; flex-direction: column; gap: 5px; }
         .modal-field label {
@@ -870,6 +921,11 @@ const Dashboard = () => {
         .modal-cancel { background: #f3f4f6; color: #374151; }
         .modal-save   { background: #1a2744; color: #fff; }
         .modal-save:disabled { opacity: 0.6; cursor: wait; }
+        @media (max-width: 720px) {
+          .modal-grid { grid-template-columns: 1fr; }
+          .modal-section-head { align-items: flex-start; flex-direction: column; gap: 4px; }
+          .modal-total { align-items: flex-start; flex-direction: column; gap: 6px; }
+        }
       `}</style>
 
       <div className={`shell ${sidebarCollapsed ? "sb-collapsed" : ""}`}>
