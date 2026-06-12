@@ -50,6 +50,42 @@ function dutyAmountForEntry(entry) {
   return calculated || Number(entry?.dutyAmount || 0);
 }
 
+function hasDutyEntry(entry) {
+  return Boolean(
+    entry?.dutyRole ||
+    entry?.dutyDates ||
+    Number(entry?.dutyDays || 0) > 0 ||
+    Number(entry?.payableDutyDays || 0) > 0 ||
+    Number(entry?.relieverSessionCount || 0) > 0 ||
+    Number(entry?.dutyAmount || 0) > 0
+  );
+}
+
+function hasTeachingEntry(entry) {
+  return Boolean(
+    entry?.courseCode ||
+    entry?.courseTitle ||
+    Number(entry?.paperSets || 0) > 0 ||
+    Number(entry?.assessments || 0) > 0
+  );
+}
+
+function entryWorkLabel(entry) {
+  if (hasDutyEntry(entry)) {
+    const role = entry?.dutyRole || "Exam Duty";
+    const days = Number(entry?.payableDutyDays || entry?.dutyDays || 0);
+    const dates = entry?.dutyDates ? ` - ${entry.dutyDates}` : "";
+    return `${role}${days ? ` - ${days} day${days === 1 ? "" : "s"}` : ""}${dates}`;
+  }
+
+  if (hasTeachingEntry(entry)) {
+    const subject = [entry?.courseCode, entry?.courseTitle].filter(Boolean).join(" - ");
+    return subject || "Teaching paper / assessment entry";
+  }
+
+  return entry?.examLabel || "Chargesheet entry";
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem("user") || "null");
@@ -785,6 +821,10 @@ const Dashboard = () => {
         .cs-name-col { min-width: 165px; }
         .cs-name { font-size: 13px; font-weight: 600; color: #0f172a; }
         .cs-desg { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+        .cs-entry-detail {
+          font-size: 11px; color: #475569; margin-top: 4px; line-height: 1.35;
+          max-width: 280px;
+        }
         .cs-prog-col { flex: 1; }
         .cs-count { font-size: 10px; color: #94a3b8; margin-bottom: 4px; }
         .prog-track { height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
@@ -1203,6 +1243,7 @@ const Dashboard = () => {
                           <div className="cs-name-col">
                             <div className="cs-name">{cs.staffName}</div>
                             <div className="cs-desg">{cs.designation}</div>
+                            <div className="cs-entry-detail">{entryWorkLabel(cs)}</div>
                           </div>
                           <div className="cs-prog-col">
                             <div className="cs-count">
@@ -1259,6 +1300,7 @@ const Dashboard = () => {
                               >
                                 {c.status}
                               </span>
+                              <div className="cs-entry-detail">{entryWorkLabel(c)}</div>
                             </div>
 
                             {canManageEntries && (
