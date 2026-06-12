@@ -186,7 +186,7 @@ function matchesExam(row, exam) {
 
 function buildTeachingSheet(exam, allRows) {
   const teachingRows = allRows.filter((row) => isTeaching(row) && hasTeachingExamWork(row));
-  const rows = commonHeadingRows(exam, 8);
+  const rows = commonHeadingRows(exam, 8, allRows);
   const merges = [
     "A1:H1",
     "A2:H2",
@@ -259,7 +259,7 @@ function buildTeachingSheet(exam, allRows) {
 
 function buildSupportSheet(exam, allRows) {
   const supportRows = allRows.filter((row) => hasDuty(row) || !isTeaching(row));
-  const rows = commonHeadingRows(exam, 7);
+  const rows = commonHeadingRows(exam, 7, allRows);
   const merges = [
     "A1:G1",
     "A2:G2",
@@ -335,7 +335,7 @@ function buildTotalSheet(exam, allRows) {
     mergedTitle("MCA Department", 7, STYLE.subtitle, 18),
     mergedTitle("Remuneration Bill", 7, STYLE.subtitle, 18),
     { cells: emptyCells(7), height: 10 },
-    mergedTitle(statementText(exam), 7, STYLE.statement, 30),
+    mergedTitle(statementText(exam, allRows), 7, STYLE.statement, 30),
     {
       cells: [
         { value: `${exam.semester} - ${exam.examType}`, style: STYLE.label },
@@ -533,12 +533,12 @@ function supportItemsForRow(row, exam) {
   return supportItems;
 }
 
-function commonHeadingRows(exam, columnCount) {
+function commonHeadingRows(exam, columnCount, rowsForExam = []) {
   return [
     mergedTitle("VEERMATA JIJABAI TECHNOLOGICAL INSTITUTE", columnCount, STYLE.title, 24),
     mergedTitle("MATUNGA, MUMBAI - 400 019.", columnCount, STYLE.subtitle, 18),
     { cells: emptyCells(columnCount), height: 12 },
-    mergedTitle(statementText(exam), columnCount, STYLE.statement, 34),
+    mergedTitle(statementText(exam, rowsForExam), columnCount, STYLE.statement, 34),
     { cells: emptyCells(columnCount), height: 10 },
     {
       cells: [
@@ -553,8 +553,11 @@ function commonHeadingRows(exam, columnCount) {
   ];
 }
 
-function statementText(exam) {
-  return `Statement showing the remuneration payable to staff engaged for the M.C.A. ${exam.examType} Examinations ${exam.month} during the period from ${exam.period}`;
+function statementText(exam, rowsForExam = []) {
+  const source = rowsForExam.find((row) => row.examPeriod || row.examMonth) || {};
+  const month = source.examMonth || exam.month;
+  const period = source.examPeriod || exam.period;
+  return `Statement showing the remuneration payable to staff engaged for the M.C.A. ${exam.examType} Examinations ${month} during the period from ${period}`;
 }
 
 function addSignatureRows(rows, columnCount, labels = ["Department Exam Coordinator", "Head of Department", "Controller of Examination"]) {

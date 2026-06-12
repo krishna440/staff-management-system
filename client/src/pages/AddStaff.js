@@ -155,9 +155,9 @@ export default function AddStaff() {
             </label>
           </div>
 
-          {/* Staff Type Toggle */}
+          {/* Teaching Type Toggle */}
           <div style={s.field}>
-            <label style={s.label}>Staff Type <span style={s.req}>*</span></label>
+            <label style={s.label}>Teaching Type <span style={s.req}>*</span></label>
             <div style={s.toggleGroup}>
               {["Teaching", "Non-Teaching"].map(t => (
                 <button
@@ -281,7 +281,7 @@ const css = `
 const s = {
   wrapper: { minHeight: "100vh", background: "linear-gradient(135deg,#eef2ff 0%,#f0fdf4 100%)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "40px 16px", fontFamily: "'Plus Jakarta Sans', sans-serif" },
   card: { width: "100%", maxWidth: 680, backgroundColor: "#fff", borderRadius: 22, boxShadow: "0 12px 48px rgba(99,102,241,.13)", overflow: "hidden", animation: "pop .3s ease" },
-  header: { background: "linear-gradient(135deg,#6366f1,#4f46e5)", padding: "24px 32px", display: "flex", alignItems: "center", gap: 16 },
+  header: { background: "linear-gradient(135deg,#6366f1,#4f46e5)", padding: "24px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 },
   headerEmoji: { fontSize: 36, background: "rgba(255,255,255,.15)", borderRadius: 14, width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   title: { margin: 0, fontSize: 20, fontWeight: 700, color: "#fff" },
   subtitle: { margin: "4px 0 0", fontSize: 13, color: "rgba(255,255,255,.75)" },

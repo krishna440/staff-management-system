@@ -770,7 +770,6 @@ const Chargesheet = () => {
   );
   const payableDutyDays = isRelieverDuty ? relieverSessionCount / 2 : dutyDaysFromCalendar;
   const dutyAmount = payableDutyDays * Number(form.dutyRate || 0);
-  const grandTotal = paperAmt + assessmentAmt + Number(form.examConduction || 0) + Number(form.invigilation || 0) + dutyAmount;
 
   const completionPercent = useMemo(() => {
     let steps = 0, done = 0;
