@@ -39,9 +39,6 @@ function paperSettingAmountForEntry(entry) {
 }
 
 function dutyAmountForEntry(entry) {
-  const stored = Number(entry?.dutyAmount || 0);
-  if (stored > 0) return stored;
-
   const role = String(entry?.dutyRole || "").trim().toLowerCase();
   if (role === "reliever") {
     const sessions = Number(entry?.relieverSessionCount || 0);
@@ -49,7 +46,8 @@ function dutyAmountForEntry(entry) {
   }
 
   const payableDays = Number(entry?.payableDutyDays || entry?.dutyDays || 0);
-  return payableDays * Number(entry?.dutyRate || 0);
+  const calculated = payableDays * Number(entry?.dutyRate || 0);
+  return calculated || Number(entry?.dutyAmount || 0);
 }
 
 const Dashboard = () => {
@@ -64,6 +62,7 @@ const Dashboard = () => {
   const [editingEntry, setEditingEntry] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [entrySaving, setEntrySaving] = useState(false);
+  const [selectedEntryIds, setSelectedEntryIds] = useState([]);
 
   const handleLogout = () => {
     sessionStorage.removeItem("user");
@@ -122,6 +121,7 @@ const Dashboard = () => {
   useEffect(() => {
     fetchReport();
     fetchChargesheets();
+    setSelectedEntryIds([]);
   }, [selectedMonth]);
 
   const fmt = (val) =>
@@ -170,6 +170,7 @@ const Dashboard = () => {
       payableDutyDays: Number(entry.payableDutyDays || 0),
       relieverSessionCount: Number(entry.relieverSessionCount || 0),
       relieverAssignments: entry.relieverAssignments || [],
+      dutyDates: entry.dutyDates || "",
       status: entry.status || "Pending",
     });
     setError(null);
@@ -177,6 +178,15 @@ const Dashboard = () => {
 
   const updateEditField = (field, value) => {
     setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateEditDutyRole = (value) => {
+    const duty = rateCfg.duties.find((item) => item.label === value);
+    setEditForm((prev) => ({
+      ...prev,
+      dutyRole: value,
+      ...(duty ? { dutyRate: duty.rate } : {}),
+    }));
   };
 
   const editTotal = (entry = editForm) =>
@@ -224,6 +234,31 @@ const Dashboard = () => {
     }
   };
 
+  const toggleEntrySelection = (entryId) => {
+    setSelectedEntryIds((prev) =>
+      prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]
+    );
+  };
+
+  const deleteSelectedEntries = async () => {
+    if (selectedEntryIds.length === 0) return;
+    const ok = window.confirm(`Delete ${selectedEntryIds.length} selected entr${selectedEntryIds.length === 1 ? "y" : "ies"}?`);
+    if (!ok) return;
+
+    try {
+      await Promise.all(
+        selectedEntryIds.map((id) =>
+          axios.delete(`https://staff-management-system-eluv.onrender.com/api/chargesheet/${id}`)
+        )
+      );
+      setSelectedEntryIds([]);
+      await refreshEntryData();
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete selected entries. Please try again.");
+    }
+  };
+
   const rateCfg = loadTaskRates();
   const paperCost = (data?.chargesheets || []).reduce(
     (sum, entry) => sum + paperSettingAmountForEntry({
@@ -247,6 +282,20 @@ const Dashboard = () => {
     paperCost +
     supervisionCost +
     lectureCost;
+
+  const visibleEntries =
+    data?.chargesheets && data.chargesheets.length > 0 ? data.chargesheets : chargesheets;
+  const visibleEntryIds = visibleEntries.map((entry) => entry._id);
+  const selectedVisibleCount = selectedEntryIds.filter((id) => visibleEntryIds.includes(id)).length;
+  const allVisibleSelected =
+    visibleEntryIds.length > 0 && visibleEntryIds.every((id) => selectedEntryIds.includes(id));
+  const toggleAllVisibleEntries = () => {
+    setSelectedEntryIds((prev) => {
+      const visibleSet = new Set(visibleEntryIds);
+      if (allVisibleSelected) return prev.filter((id) => !visibleSet.has(id));
+      return Array.from(new Set([...prev, ...visibleEntryIds]));
+    });
+  };
 
   // ─── ROLE-BASED NAV CONFIG ────────────────────────────────────────────────
   // Each nav item has a `roles` array — if empty it means visible to ALL roles.
@@ -712,8 +761,20 @@ const Dashboard = () => {
         .cs-card-head {
           padding: 14px 20px; border-bottom: 1px solid #e2e8f0;
           display: flex; align-items: center; justify-content: space-between;
+          gap: 14px; flex-wrap: wrap;
         }
         .cs-card-title { font-size: 13px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        .cs-card-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .bulk-select-control { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: #64748b; }
+        .entry-select-box {
+          width: 16px; height: 16px; accent-color: #3C3489; cursor: pointer; flex-shrink: 0;
+        }
+        .bulk-delete-btn {
+          border: none; border-radius: 8px; padding: 7px 11px;
+          font-size: 11px; font-weight: 800; cursor: pointer;
+          font-family: 'DM Sans', sans-serif; background: #fee2e2; color: #991b1b;
+        }
+        .bulk-delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .cs-row {
           display: flex; align-items: center; gap: 14px;
           padding: 14px 20px; border-bottom: 1px solid #f1f5f9;
@@ -749,7 +810,7 @@ const Dashboard = () => {
           padding: 18px;
         }
         .entry-modal {
-          width: min(720px, 100%); max-height: 92vh; overflow-y: auto;
+          width: min(900px, 100%); max-height: 92vh; overflow-y: auto;
           background: #fff; border-radius: 14px; border: 1px solid #e2e8f0;
           box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
         }
@@ -759,7 +820,22 @@ const Dashboard = () => {
         }
         .entry-modal-title { font-size: 15px; font-weight: 700; color: #0f172a; }
         .entry-modal-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
-        .entry-modal-body { padding: 18px; }
+        .entry-modal-body { padding: 18px; display: grid; gap: 14px; }
+        .entry-edit-section {
+          border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;
+          background: #fff;
+        }
+        .entry-edit-section-title {
+          display: flex; align-items: baseline; justify-content: space-between;
+          gap: 12px; margin-bottom: 12px;
+        }
+        .entry-edit-section-title span {
+          font-size: 11px; font-weight: 900; color: #0f172a;
+          text-transform: uppercase; letter-spacing: 0.7px;
+        }
+        .entry-edit-section-title small {
+          font-size: 11px; font-weight: 600; color: #94a3b8;
+        }
         .entry-edit-grid {
           display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 14px;
@@ -800,6 +876,10 @@ const Dashboard = () => {
         .entry-save-btn { background: #3C3489; color: #fff; }
         .entry-save-btn:disabled { opacity: 0.6; cursor: wait; }
         .empty-row { padding: 32px 20px; text-align: center; font-size: 13px; color: #94a3b8; }
+        @media (max-width: 760px) {
+          .entry-edit-grid { grid-template-columns: 1fr; }
+          .entry-total-box { align-items: flex-start; flex-direction: column; gap: 6px; }
+        }
 
         /* Accounts read-only notice banner */
         .readonly-banner {
@@ -1080,7 +1160,30 @@ const Dashboard = () => {
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6366f1", display: "inline-block" }} />
                       MCA Department — Exam Sheet Status
                     </div>
-                    <span style={{ fontSize: 11, color: "#94a3b8" }}>{monthLabel}</span>
+                    <div className="cs-card-tools">
+                      {canManageEntries && visibleEntryIds.length > 0 && (
+                        <>
+                          <label className="bulk-select-control">
+                            <input
+                              type="checkbox"
+                              className="entry-select-box"
+                              checked={allVisibleSelected}
+                              onChange={toggleAllVisibleEntries}
+                            />
+                            Select all
+                          </label>
+                          <button
+                            type="button"
+                            className="bulk-delete-btn"
+                            onClick={deleteSelectedEntries}
+                            disabled={selectedVisibleCount === 0}
+                          >
+                            Delete selected ({selectedVisibleCount})
+                          </button>
+                        </>
+                      )}
+                      <span style={{ fontSize: 11, color: "#94a3b8" }}>{monthLabel}</span>
+                    </div>
                   </div>
 
                   {data.chargesheets && data.chargesheets.length > 0 ? (
@@ -1088,6 +1191,15 @@ const Dashboard = () => {
                       const { prog, chip, color } = statusMeta(cs.status);
                       return (
                         <div className="cs-row" key={cs._id}>
+                          {canManageEntries && (
+                            <input
+                              type="checkbox"
+                              className="entry-select-box"
+                              checked={selectedEntryIds.includes(cs._id)}
+                              onChange={() => toggleEntrySelection(cs._id)}
+                              aria-label={`Select ${cs.staffName}`}
+                            />
+                          )}
                           <div className="cs-name-col">
                             <div className="cs-name">{cs.staffName}</div>
                             <div className="cs-desg">{cs.designation}</div>
@@ -1106,10 +1218,10 @@ const Dashboard = () => {
                           </div>
                           {canManageEntries && (
                             <div className="cs-row-actions">
-                              <button className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(cs)}>
+                              <button type="button" className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(cs)}>
                                 Edit
                               </button>
-                              <button className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(cs)}>
+                              <button type="button" className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(cs)}>
                                 Delete
                               </button>
                             </div>
@@ -1129,6 +1241,15 @@ const Dashboard = () => {
                               borderBottom: "1px solid #f1f5f9", textAlign: "left",
                             }}
                           >
+                            {canManageEntries && (
+                              <input
+                                type="checkbox"
+                                className="entry-select-box"
+                                checked={selectedEntryIds.includes(c._id)}
+                                onChange={() => toggleEntrySelection(c._id)}
+                                aria-label={`Select ${c.staffName}`}
+                              />
+                            )}
                             <div>
                               <span style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{c.staffName}</span>
                               <span style={{ fontSize: 12, color: "#64748b", marginLeft: 8 }}>₹ {fmt(c.total)}</span>
@@ -1142,10 +1263,10 @@ const Dashboard = () => {
 
                             {canManageEntries && (
                               <div className="cs-row-actions">
-                                <button className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(c)}>
+                                <button type="button" className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(c)}>
                                   Edit
                                 </button>
-                                <button className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(c)}>
+                                <button type="button" className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(c)}>
                                   Delete
                                 </button>
                               </div>
@@ -1183,87 +1304,172 @@ const Dashboard = () => {
                       </div>
 
                       <div className="entry-modal-body">
-                        <div className="entry-edit-grid">
-                          <div className="entry-edit-field">
-                            <label>Course Code</label>
-                            <input
-                              value={editForm.courseCode}
-                              onChange={(e) => updateEditField("courseCode", e.target.value)}
-                              placeholder="Course code"
-                            />
+                        <div className="entry-edit-section">
+                          <div className="entry-edit-section-title">
+                            <span>Paper Setting / Assessment</span>
+                            <small>Edit paper sets and papers assessed</small>
                           </div>
-                          <div className="entry-edit-field">
-                            <label>Course Title</label>
-                            <input
-                              value={editForm.courseTitle}
-                              onChange={(e) => updateEditField("courseTitle", e.target.value)}
-                              placeholder="Course title"
-                            />
+                          <div className="entry-edit-grid">
+                            <div className="entry-edit-field">
+                              <label>Course Code</label>
+                              <input
+                                value={editForm.courseCode}
+                                onChange={(e) => updateEditField("courseCode", e.target.value)}
+                                placeholder="Course code"
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Course Title</label>
+                              <input
+                                value={editForm.courseTitle}
+                                onChange={(e) => updateEditField("courseTitle", e.target.value)}
+                                placeholder="Course title"
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Paper Sets</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.paperSets}
+                                onChange={(e) => updateEditField("paperSets", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Paper Set Rate</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.paperSetRate}
+                                onChange={(e) => updateEditField("paperSetRate", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Papers Assessed</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.assessments}
+                                onChange={(e) => updateEditField("assessments", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Assessment Rate</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.assessmentRate}
+                                onChange={(e) => updateEditField("assessmentRate", e.target.value)}
+                              />
+                            </div>
                           </div>
-                          <div className="entry-edit-field">
-                            <label>Paper Sets</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editForm.paperSets}
-                              onChange={(e) => updateEditField("paperSets", e.target.value)}
-                            />
+                        </div>
+
+                        <div className="entry-edit-section">
+                          <div className="entry-edit-section-title">
+                            <span>Remuneration / Duty</span>
+                            <small>Edit role, dates, days and session rate</small>
                           </div>
-                          <div className="entry-edit-field">
-                            <label>Paper Set Rate</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editForm.paperSetRate}
-                              onChange={(e) => updateEditField("paperSetRate", e.target.value)}
-                            />
+                          <div className="entry-edit-grid">
+                            <div className="entry-edit-field">
+                              <label>Duty Role</label>
+                              <select
+                                value={editForm.dutyRole}
+                                onChange={(e) => updateEditDutyRole(e.target.value)}
+                              >
+                                <option value="">No duty / remuneration role</option>
+                                {rateCfg.duties.map((duty) => (
+                                  <option key={duty.key} value={duty.label}>
+                                    {duty.label} - Rs {duty.rate}/session
+                                  </option>
+                                ))}
+                                {editForm.dutyRole && !rateCfg.duties.some((duty) => duty.label === editForm.dutyRole) && (
+                                  <option value={editForm.dutyRole}>{editForm.dutyRole}</option>
+                                )}
+                              </select>
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Duty Dates</label>
+                              <input
+                                value={editForm.dutyDates}
+                                onChange={(e) => updateEditField("dutyDates", e.target.value)}
+                                placeholder="19.05.2026, 21.05.2026"
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Total Days</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.dutyDays}
+                                onChange={(e) => updateEditField("dutyDays", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Payable Days</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.payableDutyDays}
+                                onChange={(e) => updateEditField("payableDutyDays", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Rate Per Session</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.dutyRate}
+                                onChange={(e) => updateEditField("dutyRate", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Reliever Sessions</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.relieverSessionCount}
+                                onChange={(e) => updateEditField("relieverSessionCount", e.target.value)}
+                              />
+                            </div>
                           </div>
-                          <div className="entry-edit-field">
-                            <label>Assessments</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editForm.assessments}
-                              onChange={(e) => updateEditField("assessments", e.target.value)}
-                            />
+                        </div>
+
+                        <div className="entry-edit-section">
+                          <div className="entry-edit-section-title">
+                            <span>Extra Amounts / Status</span>
+                            <small>Edit direct amounts and approval state</small>
                           </div>
-                          <div className="entry-edit-field">
-                            <label>Assessment Rate</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editForm.assessmentRate}
-                              onChange={(e) => updateEditField("assessmentRate", e.target.value)}
-                            />
-                          </div>
-                          <div className="entry-edit-field">
-                            <label>Exam Conduction</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editForm.examConduction}
-                              onChange={(e) => updateEditField("examConduction", e.target.value)}
-                            />
-                          </div>
-                          <div className="entry-edit-field">
-                            <label>Invigilation / Reliever</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={editForm.invigilation}
-                              onChange={(e) => updateEditField("invigilation", e.target.value)}
-                            />
-                          </div>
-                          <div className="entry-edit-field">
-                            <label>Status</label>
-                            <select
-                              value={editForm.status}
-                              onChange={(e) => updateEditField("status", e.target.value)}
-                            >
-                              <option>Pending</option>
-                              <option>In Review</option>
-                              <option>Submitted</option>
-                            </select>
+                          <div className="entry-edit-grid">
+                            <div className="entry-edit-field">
+                              <label>Exam Conduction</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.examConduction}
+                                onChange={(e) => updateEditField("examConduction", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Invigilation Amount</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={editForm.invigilation}
+                                onChange={(e) => updateEditField("invigilation", e.target.value)}
+                              />
+                            </div>
+                            <div className="entry-edit-field">
+                              <label>Status</label>
+                              <select
+                                value={editForm.status}
+                                onChange={(e) => updateEditField("status", e.target.value)}
+                              >
+                                <option>Pending</option>
+                                <option>In Review</option>
+                                <option>Submitted</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
 
