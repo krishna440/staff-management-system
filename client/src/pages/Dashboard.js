@@ -214,7 +214,7 @@ const Dashboard = () => {
       relieverSessionCount: Number(entry.relieverSessionCount || 0),
       relieverAssignments: entry.relieverAssignments || [],
       dutyDates: entry.dutyDates || "",
-      status: entry.status || "Pending",
+      status: entry.status || "In Review",
     });
     setError(null);
   };
@@ -328,11 +328,6 @@ const Dashboard = () => {
 
   const visibleEntries =
     data?.chargesheets && data.chargesheets.length > 0 ? data.chargesheets : chargesheets;
-  const submittedEntries = visibleEntries.filter((entry) => entry.status === "Submitted").length;
-  const pendingEntries = visibleEntries.filter((entry) => entry.status !== "Submitted").length;
-  const teachingShare = data?.grandTotal
-    ? Math.round((Number(data.teachingTotal || 0) / Number(data.grandTotal || 1)) * 100)
-    : 0;
   const visibleEntryIds = visibleEntries.map((entry) => entry._id);
   const selectedVisibleCount = selectedEntryIds.filter((id) => visibleEntryIds.includes(id)).length;
   const allVisibleSelected =
@@ -764,58 +759,18 @@ const Dashboard = () => {
         /* BODY */
         .body { padding: 24px 30px 34px; display: flex; flex-direction: column; gap: 18px; }
 
-        .dashboard-hero {
-          display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
-          gap: 18px; align-items: stretch;
+        /* Page header (replaces the old hero banner) */
+        .page-header {
+          display: flex; align-items: baseline; justify-content: space-between;
+          flex-wrap: wrap; gap: 8px;
+          padding-bottom: 14px; border-bottom: 1px solid #dbe3ef;
         }
-        .hero-panel {
-          background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-          border: 1px solid #dbe3ef; border-radius: 12px; padding: 22px 24px;
-          box-shadow: 0 16px 34px rgba(15,23,42,0.07);
-          position: relative; overflow: hidden;
+        .page-header-title {
+          font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.2px;
         }
-        .hero-panel::before {
-          content: ''; position: absolute; inset: 0 0 auto 0; height: 4px;
-          background: linear-gradient(90deg, #1d4ed8, #10b981, #f59e0b);
+        .page-header-sub {
+          font-size: 12.5px; font-weight: 600; color: #64748b;
         }
-        .hero-eyebrow {
-          font-size: 10px; font-weight: 900; color: #2563eb; letter-spacing: 0.9px;
-          text-transform: uppercase; margin-bottom: 10px;
-        }
-        .hero-title {
-          font-size: 27px; font-weight: 900; line-height: 1.15; color: #0f172a;
-          max-width: 720px;
-        }
-        .hero-subtitle {
-          margin-top: 8px; max-width: 760px; color: #526174; font-size: 13.5px; line-height: 1.55;
-        }
-        .hero-meta {
-          margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px;
-        }
-        .hero-pill {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 8px 11px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0;
-          color: #334155; font-size: 12px; font-weight: 800;
-        }
-        .hero-pill-dot { width: 7px; height: 7px; border-radius: 999px; background: #10b981; }
-        .summary-panel {
-          background: #0f172a; color: #fff; border-radius: 12px; padding: 20px;
-          box-shadow: 0 16px 34px rgba(15,23,42,0.16);
-          display: flex; flex-direction: column; justify-content: space-between; gap: 18px;
-        }
-        .summary-label {
-          font-size: 10px; font-weight: 900; letter-spacing: 0.9px; color: #93c5fd;
-          text-transform: uppercase;
-        }
-        .summary-amount { font-size: 28px; font-weight: 900; margin-top: 7px; }
-        .summary-note { color: #cbd5e1; font-size: 12px; margin-top: 5px; }
-        .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-        .summary-mini {
-          background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 10px; padding: 10px;
-        }
-        .summary-mini strong { display: block; font-size: 18px; color: #fff; }
-        .summary-mini span { display: block; font-size: 11px; color: #cbd5e1; margin-top: 2px; }
 
         .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; }
         .state-spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #e2e8f0; border-top-color: #3b82f6; animation: spin 0.7s linear infinite; }
@@ -1015,10 +970,9 @@ const Dashboard = () => {
         .readonly-banner strong { font-weight: 600; }
 
         @media (max-width: 1120px) {
-          .dashboard-hero { grid-template-columns: 1fr; }
           .topbar { align-items: flex-start; gap: 12px; }
           .kpi-grid { grid-template-columns: 1fr; }
-          .stats-band { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .stats-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
           .stat-block { border-right: none; border-bottom: 1px solid #e2e8f0; }
         }
 
@@ -1032,8 +986,6 @@ const Dashboard = () => {
           .topbar { padding: 14px 18px; flex-direction: column; }
           .topbar-right { width: 100%; justify-content: flex-start; }
           .body { padding: 18px; }
-          .hero-title { font-size: 23px; }
-          .summary-grid,
           .stats-band { grid-template-columns: 1fr; }
           .cs-row { align-items: flex-start; flex-direction: column; }
           .cs-meta { text-align: left; }
@@ -1217,45 +1169,9 @@ const Dashboard = () => {
 
             {!loading && !error && data && (
               <>
-                <div className="dashboard-hero">
-                  <section className="hero-panel">
-                    <div className="hero-eyebrow">MCA Department Dashboard</div>
-                    <div className="hero-title">
-                      Exam remuneration overview for {monthLabel}
-                    </div>
-                    <div className="hero-subtitle">
-                      Review teaching, non-teaching, assessment and duty charges from one
-                      controlled monthly view. The selected period remains fixed until it is
-                      changed from the dropdown.
-                    </div>
-                    <div className="hero-meta">
-                      <span className="hero-pill">
-                        <span className="hero-pill-dot" />
-                        {visibleEntries.length} entries
-                      </span>
-                      <span className="hero-pill">{submittedEntries} submitted</span>
-                      <span className="hero-pill">{pendingEntries} pending / review</span>
-                      <span className="hero-pill">{teachingShare}% teaching share</span>
-                    </div>
-                  </section>
-
-                  <aside className="summary-panel">
-                    <div>
-                      <div className="summary-label">Selected Month Total</div>
-                      <div className="summary-amount">Rs. {fmt(data.grandTotal || grandTotal)}</div>
-                      <div className="summary-note">Active reporting month: {monthLabel}</div>
-                    </div>
-                    <div className="summary-grid">
-                      <div className="summary-mini">
-                        <strong>{data?.teachingCount ?? 0}</strong>
-                        <span>Teaching staff</span>
-                      </div>
-                      <div className="summary-mini">
-                        <strong>{data?.nonTeachingCount ?? 0}</strong>
-                        <span>Non-teaching staff</span>
-                      </div>
-                    </div>
-                  </aside>
+                <div className="page-header">
+                  <div className="page-header-title">Exam Remuneration Summary</div>
+                  <div className="page-header-sub">MCA Department · {monthLabel}</div>
                 </div>
 
                 {/* KPI Cards */}
@@ -1660,7 +1576,6 @@ const Dashboard = () => {
                                 value={editForm.status}
                                 onChange={(e) => updateEditField("status", e.target.value)}
                               >
-                                <option>Pending</option>
                                 <option>In Review</option>
                                 <option>Submitted</option>
                               </select>
