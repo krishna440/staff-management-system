@@ -26,15 +26,52 @@ function paperSettingAmountForEntry(entry) {
 }
 
 function dutyAmountForEntry(entry) {
-  const stored = Number(entry?.dutyAmount || 0);
-  if (stored > 0) return stored;
   const role = String(entry?.dutyRole || "").trim().toLowerCase();
   if (role === "reliever") {
     const sessions = Number(entry?.relieverSessionCount || 0);
     if (sessions > 0) return (sessions / 2) * Number(entry?.dutyRate || 0);
   }
   const payableDays = Number(entry?.payableDutyDays || entry?.dutyDays || 0);
-  return payableDays * Number(entry?.dutyRate || 0);
+  if (payableDays > 0 || Number(entry?.dutyRate || 0) > 0) {
+    return payableDays * Number(entry?.dutyRate || 0);
+  }
+  return Number(entry?.dutyAmount || 0);
+}
+
+function isTeachingWorkEntry(entry) {
+  return Boolean(
+    entry?.courseCode ||
+    entry?.courseTitle ||
+    Number(entry?.paperSets || 0) > 0 ||
+    Number(entry?.assessments || 0) > 0
+  );
+}
+
+function isDutyWorkEntry(entry) {
+  return Boolean(
+    entry?.dutyRole ||
+    entry?.dutyDates ||
+    Number(entry?.dutyDays || 0) > 0 ||
+    Number(entry?.payableDutyDays || 0) > 0 ||
+    Number(entry?.dutyAmount || 0) > 0 ||
+    Number(entry?.relieverSessionCount || 0) > 0
+  );
+}
+
+function entryEditKind(entry) {
+  return isDutyWorkEntry(entry) && !isTeachingWorkEntry(entry) ? "duty" : "teaching";
+}
+
+function entryRecordInfo(entry) {
+  if (isDutyWorkEntry(entry) && !isTeachingWorkEntry(entry)) {
+    const role = entry?.dutyRole || "Remuneration Duty";
+    const days = Number(entry?.payableDutyDays || entry?.dutyDays || 0);
+    const dates = entry?.dutyDates ? ` - ${entry.dutyDates}` : "";
+    return `${role}${days ? ` - ${days} day${days === 1 ? "" : "s"}` : ""}${dates}`;
+  }
+
+  const subject = [entry?.courseCode, entry?.courseTitle].filter(Boolean).join(" ");
+  return subject || "Teaching exam work";
 }
 
 const Dashboard = () => {
@@ -138,6 +175,7 @@ const Dashboard = () => {
       payableDutyDays: Number(entry.payableDutyDays || 0),
       relieverSessionCount: Number(entry.relieverSessionCount || 0),
       relieverAssignments: entry.relieverAssignments || [],
+      dutyDates: entry.dutyDates || "",
       status: entry.status || "Pending",
     });
     setError(null);
@@ -642,6 +680,7 @@ const Dashboard = () => {
         .cs-name-col { min-width: 155px; }
         .cs-name { font-size: 13px; font-weight: 600; color: #111827; }
         .cs-desg { font-size: 10.5px; color: #9ca3af; margin-top: 1px; }
+        .cs-record-info { font-size: 10.5px; color: #4b5563; margin-top: 4px; line-height: 1.35; }
         .cs-prog-col { flex: 1; }
         .cs-count { font-size: 10px; color: #9ca3af; margin-bottom: 4px; }
         .prog-track { height: 4px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
@@ -965,6 +1004,7 @@ const Dashboard = () => {
                           <div className="cs-name-col">
                             <div className="cs-name">{cs.staffName}</div>
                             <div className="cs-desg">{cs.designation}</div>
+                            <div className="cs-record-info">{entryRecordInfo(cs)}</div>
                           </div>
                           <div className="cs-prog-col">
                             <div className="cs-count">{cs.taskCount} task{cs.taskCount !== 1 ? "s" : ""} assigned</div>
@@ -997,8 +1037,9 @@ const Dashboard = () => {
                               borderBottom: "1px solid #f9fafb", textAlign: "left",
                             }}
                           >
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                               <span style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{c.staffName}</span>
+                              <span style={{ fontSize: 12, color: "#4b5563" }}>{entryRecordInfo(c)}</span>
                               <span style={{ fontSize: 12, color: "#6b7280" }}>₹ {fmt(c.total)}</span>
                               <span className={`status-chip ${c.status === "Submitted" ? "chip-green" : "chip-blue"}`}>
                                 {c.status}
@@ -1027,9 +1068,13 @@ const Dashboard = () => {
                     <div className="modal">
                       <div className="modal-head">
                         <div>
-                          <div className="modal-title">Modify Entry</div>
+                          <div className="modal-title">
+                            {entryEditKind(editingEntry) === "duty" ? "Edit Remuneration Duty" : "Edit Teaching Entry"}
+                          </div>
                           <div className="modal-sub">
-                            {editingEntry.staffName} — {editingEntry.examLabel || selectedMonth}
+                            {editingEntry.staffName} - {editingEntry.examLabel || selectedMonth}
+                            <br />
+                            {entryRecordInfo(editingEntry)}
                           </div>
                         </div>
                         <button
@@ -1040,48 +1085,77 @@ const Dashboard = () => {
                         </button>
                       </div>
                       <div className="modal-body">
-                        <div className="modal-grid">
-                          <div className="modal-field">
-                            <label>Course Code</label>
-                            <input value={editForm.courseCode} onChange={(e) => updateEditField("courseCode", e.target.value)} placeholder="Course code" />
+                        {entryEditKind(editingEntry) === "duty" ? (
+                          <div className="modal-grid">
+                            <div className="modal-field">
+                              <label>Duty Role</label>
+                              <input value={editForm.dutyRole} onChange={(e) => updateEditField("dutyRole", e.target.value)} placeholder="Reliever / Lab Attendant / HOD" />
+                            </div>
+                            <div className="modal-field">
+                              <label>Duty Dates</label>
+                              <input value={editForm.dutyDates} onChange={(e) => updateEditField("dutyDates", e.target.value)} placeholder="Dates" />
+                            </div>
+                            <div className="modal-field">
+                              <label>Total Days</label>
+                              <input type="number" min="0" value={editForm.dutyDays} onChange={(e) => updateEditField("dutyDays", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Payable Days</label>
+                              <input type="number" min="0" value={editForm.payableDutyDays} onChange={(e) => updateEditField("payableDutyDays", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Rate Per Session</label>
+                              <input type="number" min="0" value={editForm.dutyRate} onChange={(e) => updateEditField("dutyRate", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Reliever Sessions</label>
+                              <input type="number" min="0" value={editForm.relieverSessionCount} onChange={(e) => updateEditField("relieverSessionCount", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Status</label>
+                              <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
+                                <option>Pending</option>
+                                <option>In Review</option>
+                                <option>Submitted</option>
+                              </select>
+                            </div>
                           </div>
-                          <div className="modal-field">
-                            <label>Course Title</label>
-                            <input value={editForm.courseTitle} onChange={(e) => updateEditField("courseTitle", e.target.value)} placeholder="Course title" />
+                        ) : (
+                          <div className="modal-grid">
+                            <div className="modal-field">
+                              <label>Course Code</label>
+                              <input value={editForm.courseCode} onChange={(e) => updateEditField("courseCode", e.target.value)} placeholder="Course code" />
+                            </div>
+                            <div className="modal-field">
+                              <label>Course Title</label>
+                              <input value={editForm.courseTitle} onChange={(e) => updateEditField("courseTitle", e.target.value)} placeholder="Course title" />
+                            </div>
+                            <div className="modal-field">
+                              <label>Paper Sets</label>
+                              <input type="number" min="0" value={editForm.paperSets} onChange={(e) => updateEditField("paperSets", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Paper Set Rate</label>
+                              <input type="number" min="0" value={editForm.paperSetRate} onChange={(e) => updateEditField("paperSetRate", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Assessments</label>
+                              <input type="number" min="0" value={editForm.assessments} onChange={(e) => updateEditField("assessments", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Assessment Rate</label>
+                              <input type="number" min="0" value={editForm.assessmentRate} onChange={(e) => updateEditField("assessmentRate", e.target.value)} />
+                            </div>
+                            <div className="modal-field">
+                              <label>Status</label>
+                              <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
+                                <option>Pending</option>
+                                <option>In Review</option>
+                                <option>Submitted</option>
+                              </select>
+                            </div>
                           </div>
-                          <div className="modal-field">
-                            <label>Paper Sets</label>
-                            <input type="number" min="0" value={editForm.paperSets} onChange={(e) => updateEditField("paperSets", e.target.value)} />
-                          </div>
-                          <div className="modal-field">
-                            <label>Paper Set Rate</label>
-                            <input type="number" min="0" value={editForm.paperSetRate} onChange={(e) => updateEditField("paperSetRate", e.target.value)} />
-                          </div>
-                          <div className="modal-field">
-                            <label>Assessments</label>
-                            <input type="number" min="0" value={editForm.assessments} onChange={(e) => updateEditField("assessments", e.target.value)} />
-                          </div>
-                          <div className="modal-field">
-                            <label>Assessment Rate</label>
-                            <input type="number" min="0" value={editForm.assessmentRate} onChange={(e) => updateEditField("assessmentRate", e.target.value)} />
-                          </div>
-                          <div className="modal-field">
-                            <label>Exam Conduction</label>
-                            <input type="number" min="0" value={editForm.examConduction} onChange={(e) => updateEditField("examConduction", e.target.value)} />
-                          </div>
-                          <div className="modal-field">
-                            <label>Invigilation / Reliever</label>
-                            <input type="number" min="0" value={editForm.invigilation} onChange={(e) => updateEditField("invigilation", e.target.value)} />
-                          </div>
-                          <div className="modal-field">
-                            <label>Status</label>
-                            <select value={editForm.status} onChange={(e) => updateEditField("status", e.target.value)}>
-                              <option>Pending</option>
-                              <option>In Review</option>
-                              <option>Submitted</option>
-                            </select>
-                          </div>
-                        </div>
+                        )}
                         <div className="modal-total">
                           <span className="modal-total-label">Updated Total</span>
                           <span className="modal-total-value">Rs. {fmt(editTotal())}</span>

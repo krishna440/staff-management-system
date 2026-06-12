@@ -209,10 +209,9 @@ function buildTeachingSheet(exam, allRows) {
     height: 44,
   });
 
-  const grouped = groupBy(teachingRows, (row) => row.staffName || "Unknown");
   let sr = 1;
 
-  grouped.forEach((staffRows) => {
+  groupedEntriesByStaffName(teachingRows).forEach(([, staffRows]) => {
     const startRow = rows.length + 1;
     const grandTotal = sum(staffRows, (row) => teachingAmount(row));
 
@@ -283,9 +282,8 @@ function buildSupportSheet(exam, allRows) {
 
   let sr = 1;
   let writtenItems = 0;
-  const grouped = groupBy(supportRows, (row) => row.staffName || "Unknown");
 
-  grouped.forEach((staffRows) => {
+  groupedEntriesByStaffName(supportRows).forEach(([, staffRows]) => {
     const supportItems = staffRows.flatMap((row) => supportItemsForRow(row, exam));
     if (supportItems.length === 0) return;
     const startRow = rows.length + 1;
@@ -369,11 +367,10 @@ function buildTotalSheet(exam, allRows) {
     height: 38,
   });
 
-  const grouped = groupBy(allRows, (row) => row.staffName || "Unknown");
   let sr = 1;
   let grandTotal = 0;
 
-  grouped.forEach((staffRows, staffName) => {
+  groupedEntriesByStaffName(allRows).forEach(([staffName, staffRows]) => {
     const examConduction = sum(staffRows, (row) => conductionAmount(row));
     const invigilation = sum(staffRows, (row) => invigilationAmount(row));
     const paperSetting = sum(staffRows, (row) => paperSettingAmountForRow(row));
@@ -687,6 +684,18 @@ function groupBy(items, getKey) {
     map.get(key).push(item);
   });
   return map;
+}
+
+function groupedEntriesByStaffName(items) {
+  return Array.from(groupBy(items, (row) => row.staffName || "Unknown").entries())
+    .sort(([nameA], [nameB]) => sortName(nameA).localeCompare(sortName(nameB), "en-IN"));
+}
+
+function sortName(name) {
+  return String(name || "")
+    .replace(/^(prof\.?|dr\.?|mr\.?|mrs\.?|ms\.?|shri\.?|smt\.?)\s+/i, "")
+    .trim()
+    .toLowerCase();
 }
 
 function sum(items, getValue) {
