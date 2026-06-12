@@ -21,6 +21,17 @@ const EXAM_MONTHS = [
   "November 2026",
   "December 2026",
 ];
+const DASHBOARD_MONTH_STORAGE_KEY = "mca_dashboard_selected_month_v1";
+const DEFAULT_DASHBOARD_MONTH = "May 2026";
+
+const getInitialDashboardMonth = () => {
+  try {
+    const storedMonth = localStorage.getItem(DASHBOARD_MONTH_STORAGE_KEY);
+    return EXAM_MONTHS.includes(storedMonth) ? storedMonth : DEFAULT_DASHBOARD_MONTH;
+  } catch {
+    return DEFAULT_DASHBOARD_MONTH;
+  }
+};
 
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry?.assessments || 0);
@@ -94,7 +105,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [chargesheets, setChargesheets] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState(EXAM_MONTHS[0]);
+  const [selectedMonth, setSelectedMonth] = useState(getInitialDashboardMonth);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [entrySaving, setEntrySaving] = useState(false);
@@ -104,6 +115,10 @@ const Dashboard = () => {
     sessionStorage.removeItem("user");
     localStorage.removeItem("user");
     navigate("/login");
+  };
+
+  const handleMonthChange = (event) => {
+    setSelectedMonth(event.target.value);
   };
 
   const fetchReport = async () => {
@@ -149,12 +164,7 @@ const Dashboard = () => {
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    fetchReport();
-    fetchChargesheets();
-  }, []);
-
-  /* eslint-disable react-hooks/exhaustive-deps */
-  useEffect(() => {
+    localStorage.setItem(DASHBOARD_MONTH_STORAGE_KEY, selectedMonth);
     fetchReport();
     fetchChargesheets();
     setSelectedEntryIds([]);
@@ -171,10 +181,7 @@ const Dashboard = () => {
     return { prog: 20, chip: "chip-blue", color: "#3b82f6" };
   };
 
-  const monthLabel = new Date().toLocaleString("en-IN", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = selectedMonth;
 
   const userRole =
     (user?.user?.role || user?.user?.type || "").toUpperCase() || "USER";
@@ -321,6 +328,11 @@ const Dashboard = () => {
 
   const visibleEntries =
     data?.chargesheets && data.chargesheets.length > 0 ? data.chargesheets : chargesheets;
+  const submittedEntries = visibleEntries.filter((entry) => entry.status === "Submitted").length;
+  const pendingEntries = visibleEntries.filter((entry) => entry.status !== "Submitted").length;
+  const teachingShare = data?.grandTotal
+    ? Math.round((Number(data.teachingTotal || 0) / Number(data.grandTotal || 1)) * 100)
+    : 0;
   const visibleEntryIds = visibleEntries.map((entry) => entry._id);
   const selectedVisibleCount = selectedEntryIds.filter((id) => visibleEntryIds.includes(id)).length;
   const allVisibleSelected =
@@ -549,7 +561,7 @@ const Dashboard = () => {
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap');
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'DM Sans', sans-serif; background: #f0f2f8; }
+        body { font-family: 'DM Sans', sans-serif; background: #eef2f7; color: #0f172a; }
 
         .dash-shell { display: flex; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
         .dash-shell.sidebar-collapsed .sidebar { width: 72px; min-width: 72px; }
@@ -561,15 +573,16 @@ const Dashboard = () => {
         /* SIDEBAR */
         .sidebar {
           width: 240px; min-width: 240px;
-          background: #0b1120;
+          background: #0f172a;
           display: flex; flex-direction: column;
           position: relative; overflow: visible;
           transition: width .2s ease, min-width .2s ease;
+          box-shadow: 14px 0 34px rgba(15, 23, 42, 0.16);
         }
         .sidebar::before {
           content: ''; position: absolute;
           top: -60px; left: -60px; width: 220px; height: 220px;
-          background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+          background: radial-gradient(circle, rgba(96,165,250,0.18) 0%, transparent 70%);
           pointer-events: none;
         }
         .logo-section {
@@ -578,7 +591,7 @@ const Dashboard = () => {
           display: flex; align-items: center; gap: 12px;
         }
         .logo-img-wrap {
-          width: 48px; height: 48px; border-radius: 10px;
+          width: 48px; height: 48px; border-radius: 12px;
           background: #fff; display: flex; align-items: center;
           justify-content: center; flex-shrink: 0; overflow: hidden; padding: 4px;
         }
@@ -594,7 +607,7 @@ const Dashboard = () => {
         .sidebar-toggle {
           position: absolute; right: -14px; top: 24px; z-index: 100;
           width: 30px; height: 30px; border: 1px solid rgba(148,163,184,.35);
-          background: #111827; color: #dbeafe; border-radius: 999px; cursor: pointer;
+          background: #1e293b; color: #dbeafe; border-radius: 999px; cursor: pointer;
           font-size: 16px; line-height: 1; box-shadow: 0 8px 20px rgba(15,23,42,.28);
         }
         .dash-shell.sidebar-collapsed .sidebar-toggle { right: -15px; }
@@ -611,8 +624,8 @@ const Dashboard = () => {
           color: rgba(255,255,255,0.52);
           cursor: pointer; transition: all 0.15s ease; margin-bottom: 1px;
         }
-        .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
-        .nav-item.active { background: rgba(59,130,246,0.18); color: #93c5fd; font-weight: 600; }
+        .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+        .nav-item.active { background: rgba(59,130,246,0.2); color: #bfdbfe; font-weight: 700; }
         .nav-dot {
           width: 6px; height: 6px; border-radius: 50%;
           background: currentColor; flex-shrink: 0; opacity: 0.7;
@@ -678,22 +691,24 @@ const Dashboard = () => {
         .role-default { color: rgba(255,255,255,0.4); }
 
         /* MAIN */
-        .main { flex: 1; display: flex; flex-direction: column; background: #f0f2f8; min-width: 0; }
+        .main { flex: 1; display: flex; flex-direction: column; background: #f4f7fb; min-width: 0; }
 
         /* TOPBAR */
         .topbar {
-          background: #fff; border-bottom: 1px solid #e2e8f0;
-          padding: 14px 28px; display: flex; align-items: center; justify-content: space-between;
+          background: rgba(255,255,255,0.96); border-bottom: 1px solid #e2e8f0;
+          padding: 12px 30px; display: flex; align-items: center; justify-content: space-between;
+          position: sticky; top: 0; z-index: 80; backdrop-filter: blur(10px);
+          box-shadow: 0 8px 24px rgba(15,23,42,0.045);
         }
         .college-name {
           font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
           text-transform: uppercase; color: #3b82f6; margin-bottom: 3px;
         }
         .topbar-title {
-          font-family: 'DM Serif Display', serif;
-          font-size: 22px; color: #0f172a; font-weight: 400; line-height: 1;
+          font-size: 22px; color: #0f172a; font-weight: 800; line-height: 1.1;
+          letter-spacing: 0;
         }
-        .topbar-right { display: flex; align-items: center; gap: 10px; }
+        .topbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
         .topbar-user-pill {
           display: flex; align-items: center; gap: 10px;
@@ -720,22 +735,87 @@ const Dashboard = () => {
         .badge-default  { background: #e0e7ff; color: #3730a3; }
 
         .btn-pdf {
-          background: #3C3489; color: #fff; border: none;
-          padding: 8px 16px; border-radius: 9px;
-          font-size: 13px; font-weight: 600; cursor: pointer;
-          font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+          background: #1f2937; color: #fff; border: none;
+          padding: 9px 14px; border-radius: 8px;
+          font-size: 12px; font-weight: 800; cursor: pointer;
+          font-family: 'DM Sans', sans-serif; transition: background 0.15s, transform 0.12s, box-shadow 0.12s;
           white-space: nowrap;
+          box-shadow: 0 10px 20px rgba(15,23,42,0.12);
         }
-        .btn-pdf:hover { background: #2e2870; }
+        .btn-pdf:hover { background: #111827; transform: translateY(-1px); }
+
+        .month-control {
+          display: flex; align-items: center; gap: 8px;
+          background: #fff; border: 1px solid #dbe3ef; border-radius: 10px;
+          padding: 5px 8px 5px 10px; box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+        }
+        .month-control-label {
+          font-size: 10px; font-weight: 900; color: #64748b; text-transform: uppercase;
+          letter-spacing: 0.7px; white-space: nowrap;
+        }
 
         .month-select {
-          padding: 7px 10px; border-radius: 8px; border: 1px solid #e2e8f0;
-          font-size: 13px; font-family: 'DM Sans', sans-serif;
-          color: #0f172a; background: #fff; cursor: pointer;
+          padding: 6px 28px 6px 6px; border-radius: 8px; border: none;
+          font-size: 13px; font-weight: 800; font-family: 'DM Sans', sans-serif;
+          color: #0f172a; background: transparent; cursor: pointer;
+          outline: none;
         }
 
         /* BODY */
-        .body { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+        .body { padding: 24px 30px 34px; display: flex; flex-direction: column; gap: 18px; }
+
+        .dashboard-hero {
+          display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.75fr);
+          gap: 18px; align-items: stretch;
+        }
+        .hero-panel {
+          background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+          border: 1px solid #dbe3ef; border-radius: 12px; padding: 22px 24px;
+          box-shadow: 0 16px 34px rgba(15,23,42,0.07);
+          position: relative; overflow: hidden;
+        }
+        .hero-panel::before {
+          content: ''; position: absolute; inset: 0 0 auto 0; height: 4px;
+          background: linear-gradient(90deg, #1d4ed8, #10b981, #f59e0b);
+        }
+        .hero-eyebrow {
+          font-size: 10px; font-weight: 900; color: #2563eb; letter-spacing: 0.9px;
+          text-transform: uppercase; margin-bottom: 10px;
+        }
+        .hero-title {
+          font-size: 27px; font-weight: 900; line-height: 1.15; color: #0f172a;
+          max-width: 720px;
+        }
+        .hero-subtitle {
+          margin-top: 8px; max-width: 760px; color: #526174; font-size: 13.5px; line-height: 1.55;
+        }
+        .hero-meta {
+          margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px;
+        }
+        .hero-pill {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 8px 11px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0;
+          color: #334155; font-size: 12px; font-weight: 800;
+        }
+        .hero-pill-dot { width: 7px; height: 7px; border-radius: 999px; background: #10b981; }
+        .summary-panel {
+          background: #0f172a; color: #fff; border-radius: 12px; padding: 20px;
+          box-shadow: 0 16px 34px rgba(15,23,42,0.16);
+          display: flex; flex-direction: column; justify-content: space-between; gap: 18px;
+        }
+        .summary-label {
+          font-size: 10px; font-weight: 900; letter-spacing: 0.9px; color: #93c5fd;
+          text-transform: uppercase;
+        }
+        .summary-amount { font-size: 28px; font-weight: 900; margin-top: 7px; }
+        .summary-note { color: #cbd5e1; font-size: 12px; margin-top: 5px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .summary-mini {
+          background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 10px; padding: 10px;
+        }
+        .summary-mini strong { display: block; font-size: 18px; color: #fff; }
+        .summary-mini span { display: block; font-size: 11px; color: #cbd5e1; margin-top: 2px; }
 
         .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; }
         .state-spinner { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #e2e8f0; border-top-color: #3b82f6; animation: spin 0.7s linear infinite; }
@@ -744,24 +824,25 @@ const Dashboard = () => {
         .retry-btn { padding: 7px 18px; border-radius: 8px; background: #3b82f6; color: #fff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
 
         /* KPI Cards */
-        .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
         .kpi-card {
-          background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
-          padding: 20px 22px; display: flex; flex-direction: column; gap: 14px;
+          background: #fff; border: 1px solid #dbe3ef; border-radius: 10px;
+          padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
           position: relative; overflow: hidden;
           opacity: 0; transform: translateY(16px);
           animation: fadeUp 0.45s ease forwards;
+          box-shadow: 0 12px 28px rgba(15,23,42,0.06);
         }
         .kpi-card:nth-child(1) { animation-delay: 0.05s; }
         .kpi-card:nth-child(2) { animation-delay: 0.12s; }
         .kpi-card:nth-child(3) { animation-delay: 0.19s; }
         @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-        .kpi-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 14px 14px 0 0; }
+        .kpi-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 12px 12px 0 0; }
         .kpi-card.teaching::after   { background: #6366f1; }
         .kpi-card.nonteaching::after { background: #10b981; }
         .kpi-card.grand::after       { background: #f59e0b; }
         .kpi-top { display: flex; align-items: center; justify-content: space-between; }
-        .kpi-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .kpi-icon { width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; }
         .kpi-icon.teaching    { background: #eef2ff; }
         .kpi-icon.nonteaching { background: #ecfdf5; }
         .kpi-icon.grand       { background: #fffbeb; }
@@ -769,7 +850,7 @@ const Dashboard = () => {
         .kpi-badge.teaching    { background: #eef2ff; color: #4338ca; }
         .kpi-badge.nonteaching { background: #ecfdf5; color: #065f46; }
         .kpi-badge.grand       { background: #fffbeb; color: #92400e; }
-        .kpi-amount { font-family: 'DM Serif Display', serif; font-size: 30px; color: #0f172a; line-height: 1; letter-spacing: -0.5px; }
+        .kpi-amount { font-size: 29px; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: 0; }
         .kpi-label  { font-size: 12px; font-weight: 500; color: #64748b; margin-top: 4px; }
         .kpi-bar  { height: 4px; border-radius: 2px; background: #f1f5f9; overflow: hidden; }
         .kpi-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
@@ -779,9 +860,10 @@ const Dashboard = () => {
 
         /* Stats band */
         .stats-band {
-          background: #fff; border: 1px solid #e2e8f0; border-radius: 14px;
+          background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
           display: flex; overflow: hidden;
           opacity: 0; animation: fadeUp 0.45s ease 0.26s forwards;
+          box-shadow: 0 10px 24px rgba(15,23,42,0.045);
         }
         .stat-block { flex: 1; padding: 16px 20px; border-right: 1px solid #e2e8f0; }
         .stat-block:last-child { border-right: none; }
@@ -791,15 +873,17 @@ const Dashboard = () => {
 
         /* Chargesheet card */
         .cs-card {
-          background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden;
+          background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;
           opacity: 0; animation: fadeUp 0.45s ease 0.34s forwards;
+          box-shadow: 0 12px 30px rgba(15,23,42,0.055);
         }
         .cs-card-head {
-          padding: 14px 20px; border-bottom: 1px solid #e2e8f0;
+          padding: 15px 20px; border-bottom: 1px solid #e2e8f0;
           display: flex; align-items: center; justify-content: space-between;
           gap: 14px; flex-wrap: wrap;
+          background: #f8fafc;
         }
-        .cs-card-title { font-size: 13px; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        .cs-card-title { font-size: 14px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
         .cs-card-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .bulk-select-control { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: #64748b; }
         .entry-select-box {
@@ -813,17 +897,17 @@ const Dashboard = () => {
         .bulk-delete-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .cs-row {
           display: flex; align-items: center; gap: 14px;
-          padding: 14px 20px; border-bottom: 1px solid #f1f5f9;
+          padding: 15px 20px; border-bottom: 1px solid #f1f5f9;
           transition: background 0.12s;
         }
         .cs-row:last-child { border-bottom: none; }
-        .cs-row:hover { background: #fafcff; }
-        .cs-name-col { min-width: 165px; }
-        .cs-name { font-size: 13px; font-weight: 600; color: #0f172a; }
+        .cs-row:hover { background: #f8fbff; }
+        .cs-name-col { min-width: 220px; }
+        .cs-name { font-size: 13.5px; font-weight: 800; color: #0f172a; }
         .cs-desg { font-size: 11px; color: #94a3b8; margin-top: 1px; }
         .cs-entry-detail {
-          font-size: 11px; color: #475569; margin-top: 4px; line-height: 1.35;
-          max-width: 280px;
+          font-size: 11.5px; color: #475569; margin-top: 4px; line-height: 1.35;
+          max-width: 330px;
         }
         .cs-prog-col { flex: 1; }
         .cs-count { font-size: 10px; color: #94a3b8; margin-bottom: 4px; }
@@ -929,6 +1013,31 @@ const Dashboard = () => {
         .readonly-banner .icon { font-size: 16px; }
         .readonly-banner p { font-size: 13px; color: #166534; margin: 0; }
         .readonly-banner strong { font-weight: 600; }
+
+        @media (max-width: 1120px) {
+          .dashboard-hero { grid-template-columns: 1fr; }
+          .topbar { align-items: flex-start; gap: 12px; }
+          .kpi-grid { grid-template-columns: 1fr; }
+          .stats-band { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .stat-block { border-right: none; border-bottom: 1px solid #e2e8f0; }
+        }
+
+        @media (max-width: 780px) {
+          .dash-shell { flex-direction: column; }
+          .sidebar,
+          .dash-shell.sidebar-collapsed .sidebar { width: 100%; min-width: 100%; }
+          .sidebar-toggle { display: none; }
+          .nav-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-bottom: 12px; }
+          .nav-group-label { grid-column: 1 / -1; }
+          .topbar { padding: 14px 18px; flex-direction: column; }
+          .topbar-right { width: 100%; justify-content: flex-start; }
+          .body { padding: 18px; }
+          .hero-title { font-size: 23px; }
+          .summary-grid,
+          .stats-band { grid-template-columns: 1fr; }
+          .cs-row { align-items: flex-start; flex-direction: column; }
+          .cs-meta { text-align: left; }
+        }
       `}</style>
 
       <div className={`dash-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
@@ -1036,15 +1145,18 @@ const Dashboard = () => {
                 </button>
               )}
 
-              <select
-                className="month-select"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-              >
-                {EXAM_MONTHS.map((month) => (
-                  <option key={month}>{month}</option>
-                ))}
-              </select>
+              <div className="month-control">
+                <span className="month-control-label">Period</span>
+                <select
+                  className="month-select"
+                  value={selectedMonth}
+                  onChange={handleMonthChange}
+                >
+                  {EXAM_MONTHS.map((month) => (
+                    <option key={month}>{month}</option>
+                  ))}
+                </select>
+              </div>
 
               {user && (
                 <div className="topbar-user-pill" onClick={handleLogout} title="Click to logout">
@@ -1105,6 +1217,47 @@ const Dashboard = () => {
 
             {!loading && !error && data && (
               <>
+                <div className="dashboard-hero">
+                  <section className="hero-panel">
+                    <div className="hero-eyebrow">MCA Department Dashboard</div>
+                    <div className="hero-title">
+                      Exam remuneration overview for {monthLabel}
+                    </div>
+                    <div className="hero-subtitle">
+                      Review teaching, non-teaching, assessment and duty charges from one
+                      controlled monthly view. The selected period remains fixed until it is
+                      changed from the dropdown.
+                    </div>
+                    <div className="hero-meta">
+                      <span className="hero-pill">
+                        <span className="hero-pill-dot" />
+                        {visibleEntries.length} entries
+                      </span>
+                      <span className="hero-pill">{submittedEntries} submitted</span>
+                      <span className="hero-pill">{pendingEntries} pending / review</span>
+                      <span className="hero-pill">{teachingShare}% teaching share</span>
+                    </div>
+                  </section>
+
+                  <aside className="summary-panel">
+                    <div>
+                      <div className="summary-label">Selected Month Total</div>
+                      <div className="summary-amount">Rs. {fmt(data.grandTotal || grandTotal)}</div>
+                      <div className="summary-note">Active reporting month: {monthLabel}</div>
+                    </div>
+                    <div className="summary-grid">
+                      <div className="summary-mini">
+                        <strong>{data?.teachingCount ?? 0}</strong>
+                        <span>Teaching staff</span>
+                      </div>
+                      <div className="summary-mini">
+                        <strong>{data?.nonTeachingCount ?? 0}</strong>
+                        <span>Non-teaching staff</span>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+
                 {/* KPI Cards */}
                 <div className="kpi-grid">
                   <div className="kpi-card teaching">
