@@ -17,8 +17,8 @@ exports.addStaff = async (req, res) => {
     } = req.body;
 
     // Validation
-    if (!name || !phone || !department || !designation || !type || !empId) {
-      return res.status(400).json({ error: "All fields are required" });
+    if (!name || !designation || !type) {
+      return res.status(400).json({ error: "Name, designation, and teaching type are required" });
     }
 
     const staff = new Staff({

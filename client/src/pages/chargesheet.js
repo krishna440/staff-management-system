@@ -506,12 +506,8 @@ const Chargesheet = () => {
     [selectedCourses, form.courseKey, form.courseCode]
   );
 
-  const labCourses = useMemo(
-    () => selectedCourses.filter((course) => course.kind === "lab"),
-    [selectedCourses]
-  );
-
   const isLabCourse = selectedCourse?.kind === "lab";
+  const [showExamPeriodPicker, setShowExamPeriodPicker] = useState(false);
 
   useEffect(() => {
     fetchStaff();
@@ -593,6 +589,7 @@ const Chargesheet = () => {
         courseCode: "",
         courseTitle: "",
       }));
+      setShowExamPeriodPicker(false);
     } else {
       setForm((p) => ({ ...p, [name]: value }));
     }
@@ -610,6 +607,7 @@ const Chargesheet = () => {
     }));
     if (range.start && range.end) {
       saveStoredExamPeriod(selectedExam.key, range);
+      setShowExamPeriodPicker(false);
     }
     setDutyDateKeys([]);
     setRelieverRoomsByDate({});
@@ -867,10 +865,11 @@ const Chargesheet = () => {
         .cs-body {
           padding: 28px 32px;
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 360px;
+          grid-template-columns: minmax(0, 1fr);
           gap: 24px;
-          max-width: 1400px;
+          max-width: 1120px;
           margin: 0 auto;
+          padding-bottom: 104px;
         }
 
         /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ CARDS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
@@ -1239,6 +1238,17 @@ const Chargesheet = () => {
           margin-top: 12px;
           background: rgba(255,255,255,.72);
         }
+        .cs-period-toggle {
+          width: fit-content;
+          border: 1px solid #c7d2fe;
+          background: #fff;
+          color: #4338ca;
+          font-weight: 800;
+          border-radius: 999px;
+          padding: 8px 12px;
+          cursor: pointer;
+          margin-top: 10px;
+        }
         .cs-duty-cal-hint {
           margin-top: 12px;
           font-size: 11px;
@@ -1368,6 +1378,20 @@ const Chargesheet = () => {
 
         /* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ BUTTONS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */
         .cs-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .cs-fixed-actions {
+          position: fixed;
+          right: 32px;
+          bottom: 28px;
+          z-index: 90;
+          display: flex;
+          gap: 10px;
+          padding: 10px;
+          border-radius: 16px;
+          background: rgba(255,255,255,.92);
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 16px 36px rgba(15,23,42,.18);
+          backdrop-filter: blur(10px);
+        }
         .cs-save-btn {
           flex: 1;
           padding: 14px 20px;
@@ -1532,12 +1556,21 @@ const Chargesheet = () => {
                   <span className="cs-info-tile-label" style={{ color: selectedExam.color }}>Exam Period</span>
                   <span className="cs-info-tile-val">{form.examPeriod || "Select start and end date"}</span>
                   <span className="cs-info-tile-sub" style={{ color: "#64748b" }}>{form.examMonth}</span>
-                  <ExamPeriodRangeCalendar
-                    value={selectedExamRange}
-                    onChange={handleExamRangeChange}
-                    accent={selectedExam.color}
-                    fallbackMonth={selectedExam.month}
-                  />
+                  <button
+                    type="button"
+                    className="cs-period-toggle"
+                    onClick={() => setShowExamPeriodPicker((value) => !value)}
+                  >
+                    {showExamPeriodPicker ? "Hide calendar" : "Change dates"}
+                  </button>
+                  {showExamPeriodPicker && (
+                    <ExamPeriodRangeCalendar
+                      value={selectedExamRange}
+                      onChange={handleExamRangeChange}
+                      accent={selectedExam.color}
+                      fallbackMonth={selectedExam.month}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -1604,19 +1637,6 @@ const Chargesheet = () => {
               </div>
               <div className="cs-card-body">
                 <div className="cs-section-divider"><span>Subject selection</span></div>
-                {labCourses.length > 0 && (
-                  <>
-                    <div className="cs-section-divider"><span>Lab subjects for {selectedExam.semester}</span></div>
-                    <div className="cs-lab-subjects">
-                      {labCourses.map((course) => (
-                        <div key={course.code} className="cs-lab-subject">
-                          <span className="cs-lab-code">{course.code}</span>
-                          <span className="cs-lab-title">{course.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
                 <div className="cs-grid2" style={{ marginBottom: 20 }}>
                   <div className="cs-field">
                     <label className="cs-label">Subject <span>*</span></label>
@@ -1837,48 +1857,11 @@ const Chargesheet = () => {
         </div>
 
         {/* ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ SIDEBAR: Summary ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ */}
-        <div className="cs-summary">
-          <div className="cs-card" style={{ overflow: "hidden" }}>
-            <div className="cs-sum-header">
-              <h3>Amount Summary</h3>
-              <div style={{ fontSize: 12, opacity: .7, marginBottom: 4 }}>{selectedExam.label}</div>
-              <div className="cs-sum-total-label">Grand Total</div>
-              <div className="cs-sum-total-val">Rs {fmt(grandTotal)}</div>
-            </div>
-            <div className="cs-sum-body">
-              <SumRow dot="#6366f1" label="Paper Setting" value={paperAmt} fmt={fmt} />
-              <SumRow dot="#10b981" label="Assessment" value={assessmentAmt} fmt={fmt} />
-              <SumRow dot="#f59e0b" label="Exam Conduction" value={form.examConduction} fmt={fmt} />
-              <SumRow dot="#f43f5e" label="Invigilation / Reliever" value={form.invigilation} fmt={fmt} />
-              <SumRow dot="#2563eb" label="Teaching / Non-Teaching Duty" value={dutyAmount} fmt={fmt} />
-
-              <div className="cs-divider" />
-
-              {form.staffName && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>
-                    Assigned to
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #818cf8)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 13 }}>
-                      {form.staffName.charAt(0)}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>{form.staffName}</div>
-                      <div style={{ fontSize: 11, color: "#94a3b8" }}>{form.designation}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="cs-actions">
-                <button className="cs-save-btn" onClick={handleSubmit} disabled={saving}>
-                  {saving ? <><div className="cs-spinner" /> Saving...</> : <>Save Sheet</>}
-                </button>
-                <button className="cs-reset-btn" onClick={handleReset} title="Reset form">Reset</button>
-              </div>
-            </div>
-          </div>
+        <div className="cs-fixed-actions">
+          <button className="cs-save-btn" onClick={handleSubmit} disabled={saving}>
+            {saving ? <><div className="cs-spinner" /> Saving...</> : <>Save Sheet</>}
+          </button>
+          <button className="cs-reset-btn" onClick={handleReset} title="Reset form">Reset</button>
         </div>
       </div>
     </div>
@@ -1907,21 +1890,6 @@ function WorkTile({ icon, name, rate, unit, value, amount, onMinus, onPlus, onVa
         />
         <button className="cs-counter-btn" type="button" onClick={onPlus}>+</button>
       </div>
-    </div>
-  );
-}
-
-function SumRow({ dot, label, value, fmt }) {
-  const isZero = Number(value || 0) === 0;
-  return (
-    <div className="cs-sum-row">
-      <span className="cs-sum-row-label">
-        <span className="cs-sum-row-dot" style={{ background: isZero ? "#e2e8f0" : dot }} />
-        {label}
-      </span>
-      <span className={`cs-sum-row-val ${isZero ? "zero" : ""}`}>
-        Rs {fmt(value)}
-      </span>
     </div>
   );
 }

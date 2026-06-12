@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import API from "../services/api";
+import { useNavigate } from "react-router-dom";
 
 const departments = [
   "Mathematics", "Science", "English", "History", "Geography",
@@ -19,6 +20,7 @@ const initialForm = {
 };
 
 export default function AddStaff() {
+  const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [avatar, setAvatar] = useState(null);
   const [errors, setErrors] = useState({});
@@ -48,12 +50,9 @@ export default function AddStaff() {
   const validate = () => {
     const e = {};
     if (!form.name.trim()) e.name = "Name is required";
-    if (!form.phone.trim()) e.phone = "Phone is required";
-    else if (!/^\d{10}$/.test(form.phone)) e.phone = "Enter a valid 10-digit number";
-    if (!form.department) e.department = "Department is required";
+    if (form.phone.trim() && !/^\d{10}$/.test(form.phone)) e.phone = "Enter a valid 10-digit number";
     if (!form.designation.trim()) e.designation = "Designation is required";
-    if (!form.empId.trim()) e.empId = "Employee ID is required";
-    if (!form.photo) e.photo = "Photo is required";
+    if (!form.type) e.type = "Teaching type is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -71,7 +70,7 @@ export default function AddStaff() {
       formData.append("designation", form.designation);
       formData.append("type", form.type);
       formData.append("empId", form.empId);
-      formData.append("photo", form.photo);
+      if (form.photo) formData.append("photo", form.photo);
 
       await API.post("/staff", formData, {
         headers: { "Content-Type": "multipart/form-data" }
@@ -107,6 +106,7 @@ export default function AddStaff() {
             <h2 style={s.successTitle}>Staff Added!</h2>
             <p style={s.successSub}><strong>{form.name}</strong> has been registered successfully.</p>
             <button style={s.btnPrimary} onClick={reset}>+ Add Another</button>
+            <button style={s.btnSecondary} onClick={() => navigate("/")}>Go to Dashboard</button>
           </div>
         </div>
       </div>
@@ -125,6 +125,7 @@ export default function AddStaff() {
             <h1 style={s.title}>Add New Staff</h1>
             <p style={s.subtitle}>Fill in the details below to register a staff member</p>
           </div>
+          <button style={s.btnSecondary} onClick={() => navigate("/")}>Go to Dashboard</button>
         </div>
 
         <div style={s.body}>
@@ -152,7 +153,6 @@ export default function AddStaff() {
                 )}
               <input type="file" accept="image/*" onChange={handleAvatar} style={{ display: "none" }} />
             </label>
-            {errors.photo && <span style={s.err}>{errors.photo}</span>}
           </div>
 
           {/* Staff Type Toggle */}
@@ -170,12 +170,13 @@ export default function AddStaff() {
                 </button>
               ))}
             </div>
+            {errors.type && <span style={s.err}>{errors.type}</span>}
           </div>
 
           {/* Grid Fields */}
           <div style={s.grid}>
 
-            <Field label="Full Name" error={errors.name}>
+            <Field label="Full Name" error={errors.name} required>
               <input name="name" value={form.name} onChange={handleChange}
                 placeholder="e.g. Ramesh Kumar"
                 style={{ ...s.input, ...(errors.name ? s.inputErr : {}) }} />
@@ -204,7 +205,7 @@ export default function AddStaff() {
               {errors.department && <span style={s.err}>{errors.department}</span>}
             </Field>
 
-            <Field label="Designation" error={errors.designation}>
+            <Field label="Designation" error={errors.designation} required>
               <input name="designation" value={form.designation} onChange={handleChange}
                 placeholder="e.g. Senior Teacher"
                 style={{ ...s.input, ...(errors.designation ? s.inputErr : {}) }} />
@@ -233,10 +234,10 @@ export default function AddStaff() {
   );
 }
 
-function Field({ label, error, children }) {
+function Field({ label, error, children, required = false }) {
   return (
     <div style={s.field}>
-      <label style={s.label}>{label} <span style={s.req}>*</span></label>
+      <label style={s.label}>{label} {required && <span style={s.req}>*</span>}</label>
       {children}
       {error && <span style={s.err}>{error}</span>}
     </div>
