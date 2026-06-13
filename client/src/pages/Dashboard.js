@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { downloadExamWorkbook } from "../utils/examWorkbook";
+import {
+  downloadExamWorkbook,
+  filterExamWorkbookRows,
+  getExamWorkbookGroupOptions,
+} from "../utils/examWorkbook";
 import { addVjtiLogoToPdf } from "../utils/logo";
 import { loadTaskRates } from "../utils/taskRates";
 
@@ -120,6 +124,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [chargesheets, setChargesheets] = useState([]);
+  const [examWorkbookRows, setExamWorkbookRows] = useState([]);
+  const [selectedExamExportKey, setSelectedExamExportKey] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState(getInitialDashboardMonth);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editForm, setEditForm] = useState(null);
@@ -163,10 +169,29 @@ const Dashboard = () => {
     }
   };
 
-  const generateExamWorkbook = async () => {
+  const fetchExamWorkbookRows = async () => {
     try {
       const res = await axios.get("https://staff-management-system-eluv.onrender.com/api/chargesheet");
-      await downloadExamWorkbook(res.data);
+      setExamWorkbookRows(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const generateExamWorkbook = async () => {
+    try {
+      const sourceRows =
+        examWorkbookRows.length > 0
+          ? examWorkbookRows
+          : (await axios.get("https://staff-management-system-eluv.onrender.com/api/chargesheet")).data;
+      const groupOptions = getExamWorkbookGroupOptions(sourceRows);
+      const selectedGroup = groupOptions.find((group) => group.key === selectedExamExportKey);
+      const exportRows = filterExamWorkbookRows(sourceRows, selectedExamExportKey);
+      await downloadExamWorkbook(exportRows, {
+        fileLabel: selectedGroup
+          ? `MCA_${selectedGroup.label}_Exam_Sheets`
+          : "MCA_All_Exam_Sheets",
+      });
     } catch (err) {
       console.error(err);
       setError("Failed to generate exam workbook. Please try again.");
@@ -185,6 +210,11 @@ const Dashboard = () => {
     setSelectedEntryIds([]);
   }, [selectedMonth]);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    fetchExamWorkbookRows();
+  }, []);
+
   const fmt = (val) =>
     Number(val || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
@@ -200,6 +230,16 @@ const Dashboard = () => {
   const monthOptions = EXAM_MONTHS.includes(selectedMonth)
     ? EXAM_MONTHS
     : [selectedMonth, ...EXAM_MONTHS];
+  const examWorkbookGroupOptions = useMemo(
+    () => getExamWorkbookGroupOptions(examWorkbookRows),
+    [examWorkbookRows]
+  );
+
+  useEffect(() => {
+    if (selectedExamExportKey === "all") return;
+    const stillExists = examWorkbookGroupOptions.some((group) => group.key === selectedExamExportKey);
+    if (!stillExists) setSelectedExamExportKey("all");
+  }, [examWorkbookGroupOptions, selectedExamExportKey]);
 
   const userRole =
     (user?.user?.role || user?.user?.type || "").toUpperCase() || "USER";
@@ -779,6 +819,21 @@ const Dashboard = () => {
           outline: none;
         }
 
+        .sheet-export-control {
+          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+          background: #fff; border: 1px solid #dbe3ef; border-radius: 10px;
+          padding: 5px; box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+        }
+        .sheet-export-select {
+          min-width: 210px; max-width: 280px;
+          padding: 7px 28px 7px 9px; border-radius: 8px; border: none;
+          font-size: 12px; font-weight: 800; font-family: 'DM Sans', sans-serif;
+          color: #0f172a; background: #f8fafc; cursor: pointer; outline: none;
+        }
+        .sheet-export-control .btn-pdf {
+          box-shadow: none;
+        }
+
         /* BODY */
         .body { padding: 24px 30px 34px; display: flex; flex-direction: column; gap: 18px; }
 
@@ -1158,9 +1213,24 @@ const Dashboard = () => {
               )}
 
               {(userRole === "ACCOUNTS" || userRole === "HOD" || userRole === "ADMIN") && (
-                <button className="btn-pdf" onClick={generateExamWorkbook}>
-                  Download Exam Sheets
-                </button>
+                <div className="sheet-export-control">
+                  <select
+                    className="sheet-export-select"
+                    value={selectedExamExportKey}
+                    onChange={(e) => setSelectedExamExportKey(e.target.value)}
+                    title="Choose which exam sheets to download"
+                  >
+                    <option value="all">All exams, month-wise and batch-wise</option>
+                    {examWorkbookGroupOptions.map((group) => (
+                      <option key={group.key} value={group.key}>
+                        {group.label} ({group.count})
+                      </option>
+                    ))}
+                  </select>
+                  <button className="btn-pdf" onClick={generateExamWorkbook}>
+                    Download Exam Sheets
+                  </button>
+                </div>
               )}
 
               <div className="month-control">

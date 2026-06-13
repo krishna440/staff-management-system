@@ -94,7 +94,20 @@ const TEACHING_WIDTHS = [7, 24, 42, 18, 14, 18, 14, 18];
 const SUPPORT_WIDTHS = [7, 27, 20, 34, 16, 20, 16];
 const TOTAL_WIDTHS = [8, 32, 22, 22, 18, 18, 22];
 
-export async function downloadExamWorkbook(chargesheets) {
+export function getExamWorkbookGroupOptions(chargesheets = []) {
+  return buildExamGroups(chargesheets).map(({ key, exam, rows }) => ({
+    key,
+    label: `${exam.academicYear} ${exam.semester} ${exam.examType} - ${exam.month}`,
+    count: rows.length,
+  }));
+}
+
+export function filterExamWorkbookRows(chargesheets = [], groupKey = "all") {
+  if (!groupKey || groupKey === "all") return chargesheets;
+  return chargesheets.filter((row) => examGroupKey(row) === groupKey);
+}
+
+export async function downloadExamWorkbook(chargesheets, options = {}) {
   const sheets = [];
 
   buildExamGroups(chargesheets).forEach(({ exam, rows }) => {
@@ -116,7 +129,7 @@ export async function downloadExamWorkbook(chargesheets) {
   const url = URL.createObjectURL(workbookBlob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "MCA_Month_Batch_Exam_Sheets.xlsx";
+  link.download = `${sanitizeFileName(options.fileLabel || "MCA_Month_Batch_Exam_Sheets")}.xlsx`;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -124,18 +137,10 @@ export async function downloadExamWorkbook(chargesheets) {
 }
 
 function buildExamGroups(chargesheets = []) {
-  const groups = groupBy(chargesheets, (row) =>
-    [
-      row.examMonth || row.month || "Unscheduled",
-      row.academicYear || "Batch",
-      row.semester || "Semester",
-      row.examType || "Exam",
-      row.examLabel || "",
-    ].join("||")
-  );
+  const groups = groupBy(chargesheets, examGroupKey);
 
   return Array.from(groups.entries())
-    .map(([, rows]) => {
+    .map(([key, rows]) => {
       const first = rows[0] || {};
       const month = first.examMonth || first.month || "Unscheduled";
       const academicYear = first.academicYear || "Batch";
@@ -143,6 +148,7 @@ function buildExamGroups(chargesheets = []) {
       const examType = first.examType || "Exam";
       const label = first.examLabel || `${academicYear} ${semester} - ${examType}`;
       return {
+        key,
         exam: {
           label,
           shortName: shortExamName({ month, academicYear, semester, examType }),
@@ -160,6 +166,16 @@ function buildExamGroups(chargesheets = []) {
       if (monthSort !== 0) return monthSort;
       return a.exam.shortName.localeCompare(b.exam.shortName, "en-IN");
     });
+}
+
+function examGroupKey(row) {
+  return [
+    row.examMonth || row.month || "Unscheduled",
+    row.academicYear || "Batch",
+    row.semester || "Semester",
+    row.examType || "Exam",
+    row.examLabel || "",
+  ].join("||");
 }
 
 function shortExamName({ month, academicYear, semester, examType }) {
@@ -202,6 +218,14 @@ function sanitizeSheetText(value) {
     .replace(new RegExp("[\\[\\]*?:/\\\\]", "g"), " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function sanitizeFileName(value) {
+  return sanitizeSheetText(value)
+    .replace(/[^\w\s.-]/g, " ")
+    .replace(/\s+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 120) || "MCA_Exam_Sheets";
 }
 
 function uniquifySheetNames(sheets) {
