@@ -75,63 +75,6 @@ function invigilationAmount(row) {
   return (standaloneMovedToConduction ? 0 : directInvigilation) + (isConductionDuty(row) ? 0 : dutyAmount(row));
 }
 
-const EXAM_DEFINITIONS = [
-  {
-    label: "FY Sem I - ESE",
-    shortName: "FY S1 ESE",
-    academicYear: "FY",
-    semester: "Sem I",
-    examType: "ESE",
-    month: "January 2026",
-    period: "05/01/2026 to 19/01/2026",
-  },
-  {
-    label: "FY Sem I - Re-ESE",
-    shortName: "FY S1 RE",
-    academicYear: "FY",
-    semester: "Sem I",
-    examType: "Re-ESE",
-    month: "February 2026",
-    period: "09/02/2026 to 13/02/2026",
-  },
-  {
-    label: "FY Sem II - ESE",
-    shortName: "FY S2 ESE",
-    academicYear: "FY",
-    semester: "Sem II",
-    examType: "ESE",
-    month: "May 2026",
-    period: "May 2026",
-  },
-  {
-    label: "FY Sem II - Re-ESE",
-    shortName: "FY S2 RE",
-    academicYear: "FY",
-    semester: "Sem II",
-    examType: "Re-ESE",
-    month: "June 2026",
-    period: "June 2026",
-  },
-  {
-    label: "SY Sem III - ESE",
-    shortName: "SY S3 ESE",
-    academicYear: "SY",
-    semester: "Sem III",
-    examType: "ESE",
-    month: "December 2026",
-    period: "December 2026",
-  },
-  {
-    label: "SY Sem III - Re-ESE",
-    shortName: "SY S3 RE",
-    academicYear: "SY",
-    semester: "Sem III",
-    examType: "Re-ESE",
-    month: "January 2026",
-    period: "21/01/2026 to 27/01/2026",
-  },
-];
-
 const STYLE = {
   normal: 0,
   title: 1,
@@ -154,34 +97,123 @@ const TOTAL_WIDTHS = [8, 32, 22, 22, 18, 18, 22];
 export async function downloadExamWorkbook(chargesheets) {
   const sheets = [];
 
-  EXAM_DEFINITIONS.forEach((exam) => {
-    const rows = chargesheets.filter((row) => matchesExam(row, exam));
+  buildExamGroups(chargesheets).forEach(({ exam, rows }) => {
     sheets.push(buildTeachingSheet(exam, rows));
     sheets.push(buildSupportSheet(exam, rows));
     sheets.push(buildTotalSheet(exam, rows));
   });
 
-  const workbookBlob = buildXlsx(sheets);
+  if (sheets.length === 0) {
+    sheets.push({
+      name: "No Entries",
+      widths: [48],
+      rows: [mergedTitle("No chargesheet entries available for export.", 1, STYLE.text, 28)],
+      merges: [],
+    });
+  }
+
+  const workbookBlob = buildXlsx(uniquifySheetNames(sheets));
   const url = URL.createObjectURL(workbookBlob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "MCA_ESE_RE_ESE_Exam_Sheets.xlsx";
+  link.download = "MCA_Month_Batch_Exam_Sheets.xlsx";
   document.body.appendChild(link);
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function matchesExam(row, exam) {
-  return (
-    row.examLabel === exam.label ||
-    (
-      row.academicYear === exam.academicYear &&
-      row.semester === exam.semester &&
-      row.examType === exam.examType &&
-      (!row.examMonth || row.examMonth === exam.month)
-    )
+function buildExamGroups(chargesheets = []) {
+  const groups = groupBy(chargesheets, (row) =>
+    [
+      row.examMonth || row.month || "Unscheduled",
+      row.academicYear || "Batch",
+      row.semester || "Semester",
+      row.examType || "Exam",
+      row.examLabel || "",
+    ].join("||")
   );
+
+  return Array.from(groups.entries())
+    .map(([, rows]) => {
+      const first = rows[0] || {};
+      const month = first.examMonth || first.month || "Unscheduled";
+      const academicYear = first.academicYear || "Batch";
+      const semester = first.semester || "Semester";
+      const examType = first.examType || "Exam";
+      const label = first.examLabel || `${academicYear} ${semester} - ${examType}`;
+      return {
+        exam: {
+          label,
+          shortName: shortExamName({ month, academicYear, semester, examType }),
+          academicYear,
+          semester,
+          examType,
+          month,
+          period: first.examPeriod || month,
+        },
+        rows,
+      };
+    })
+    .sort((a, b) => {
+      const monthSort = monthSortValue(a.exam.month) - monthSortValue(b.exam.month);
+      if (monthSort !== 0) return monthSort;
+      return a.exam.shortName.localeCompare(b.exam.shortName, "en-IN");
+    });
+}
+
+function shortExamName({ month, academicYear, semester, examType }) {
+  return [
+    shortMonthLabel(month),
+    academicYear,
+    shortSemesterLabel(semester),
+    examType === "Re-ESE" ? "RE" : examType,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function shortMonthLabel(month) {
+  const date = monthDate(month);
+  if (!date) return sanitizeSheetText(month || "Month").slice(0, 8);
+  return `${date.toLocaleString("en-IN", { month: "short" })}${String(date.getFullYear()).slice(-2)}`;
+}
+
+function shortSemesterLabel(semester) {
+  return String(semester || "")
+    .replace(/^Sem\s+/i, "S")
+    .replace(/\s+/g, "");
+}
+
+function monthDate(month) {
+  const date = new Date(`1 ${String(month || "").trim()}`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function monthSortValue(month) {
+  const date = monthDate(month);
+  return date ? date.getFullYear() * 12 + date.getMonth() : Number.MAX_SAFE_INTEGER;
+}
+
+function sanitizeSheetText(value) {
+  return String(value || "")
+    .replace(new RegExp("[\\[\\]*?:/\\\\]", "g"), " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function uniquifySheetNames(sheets) {
+  const seen = new Map();
+  return sheets.map((sheet) => {
+    const base = sanitizeSheetText(sheet.name || "Sheet").slice(0, 31) || "Sheet";
+    const count = seen.get(base) || 0;
+    seen.set(base, count + 1);
+    if (count === 0) return { ...sheet, name: base };
+    const suffix = ` ${count + 1}`;
+    return { ...sheet, name: `${base.slice(0, 31 - suffix.length)}${suffix}` };
+  });
 }
 
 function buildTeachingSheet(exam, allRows) {

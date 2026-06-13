@@ -7,27 +7,42 @@ import { downloadExamWorkbook } from "../utils/examWorkbook";
 import { addVjtiLogoToPdf } from "../utils/logo";
 import { loadTaskRates } from "../utils/taskRates";
 
-const EXAM_MONTHS = [
-  "January 2026",
-  "February 2026",
-  "March 2026",
-  "April 2026",
-  "May 2026",
-  "June 2026",
-  "July 2026",
-  "August 2026",
-  "September 2026",
-  "October 2026",
-  "November 2026",
-  "December 2026",
-];
 const DASHBOARD_MONTH_STORAGE_KEY = "mca_dashboard_selected_month_v1";
 const DEFAULT_DASHBOARD_MONTH = "May 2026";
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function buildExamMonths(startYear = 2026, endYear = new Date().getFullYear() + 5) {
+  const months = [];
+  for (let year = startYear; year <= endYear; year += 1) {
+    MONTH_NAMES.forEach((month) => months.push(`${month} ${year}`));
+  }
+  return months;
+}
+
+function isValidMonthLabel(value) {
+  const date = new Date(`1 ${String(value || "").trim()}`);
+  return !Number.isNaN(date.getTime());
+}
+
+const EXAM_MONTHS = buildExamMonths();
 
 const getInitialDashboardMonth = () => {
   try {
     const storedMonth = localStorage.getItem(DASHBOARD_MONTH_STORAGE_KEY);
-    return EXAM_MONTHS.includes(storedMonth) ? storedMonth : DEFAULT_DASHBOARD_MONTH;
+    return isValidMonthLabel(storedMonth) ? storedMonth : DEFAULT_DASHBOARD_MONTH;
   } catch {
     return DEFAULT_DASHBOARD_MONTH;
   }
@@ -182,6 +197,9 @@ const Dashboard = () => {
   };
 
   const monthLabel = selectedMonth;
+  const monthOptions = EXAM_MONTHS.includes(selectedMonth)
+    ? EXAM_MONTHS
+    : [selectedMonth, ...EXAM_MONTHS];
 
   const userRole =
     (user?.user?.role || user?.user?.type || "").toUpperCase() || "USER";
@@ -353,7 +371,7 @@ const Dashboard = () => {
       label: "Overview",
       items: [
         {
-          label: "Overview",
+          label: "Dashboard",
           path: "/",
           roles: ["ADMIN", "HOD", "ACCOUNTS"],
           dot: false,
@@ -1152,7 +1170,7 @@ const Dashboard = () => {
                   value={selectedMonth}
                   onChange={handleMonthChange}
                 >
-                  {EXAM_MONTHS.map((month) => (
+                  {monthOptions.map((month) => (
                     <option key={month}>{month}</option>
                   ))}
                 </select>

@@ -70,6 +70,25 @@ const EXAM_OPTIONS = [
     color: "#8b5cf6",
   },
 ];
+const DEFAULT_EXAM_YEAR = 2026;
+const EXAM_YEAR_OPTIONS = Array.from(
+  { length: Math.max(6, new Date().getFullYear() - DEFAULT_EXAM_YEAR + 6) },
+  (_, index) => DEFAULT_EXAM_YEAR + index
+);
+
+function replaceYearInText(value, year) {
+  return String(value || "").replace(/\b2026\b/g, String(year));
+}
+
+function examOptionForYear(option, year) {
+  const examYear = Number(year) || DEFAULT_EXAM_YEAR;
+  return {
+    ...option,
+    month: replaceYearInText(option.month, examYear),
+    period: replaceYearInText(option.period, examYear),
+    storageKey: `${option.key}_${examYear}`,
+  };
+}
 
 const COURSE_CATALOG = {
   "Sem I": [
@@ -271,6 +290,10 @@ function saveStoredLabExamPeriod(examKey, range) {
   localStorage.setItem(LAB_EXAM_PERIOD_STORAGE_KEY, JSON.stringify(stored));
 }
 
+function storedPeriodKey(exam) {
+  return exam.storageKey || exam.key;
+}
+
 function defaultExamRange(exam) {
   const bounds = examDateBounds(exam.period, exam.month);
   return {
@@ -280,13 +303,13 @@ function defaultExamRange(exam) {
 }
 
 function examRangeFor(exam) {
-  const stored = loadStoredExamPeriods()[exam.key];
+  const stored = loadStoredExamPeriods()[storedPeriodKey(exam)];
   if (stored?.start && stored?.end) return stored;
   return defaultExamRange(exam);
 }
 
 function labExamRangeFor(exam) {
-  const stored = loadStoredLabExamPeriods()[exam.key];
+  const stored = loadStoredLabExamPeriods()[storedPeriodKey(exam)];
   if (stored?.start && stored?.end) return stored;
   return { start: "", end: "" };
 }
@@ -487,6 +510,10 @@ const Chargesheet = () => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState(() => emptyChargeForm());
+  const [examYear, setExamYear] = useState(() => {
+    const startDate = dateFromDateKey(emptyChargeForm().examStartDate);
+    return startDate?.getFullYear() || DEFAULT_EXAM_YEAR;
+  });
   const [taskRateConfig, setTaskRateConfig] = useState(() => loadTaskRates());
   const [subjectCatalog, setSubjectCatalog] = useState(() => loadSubjectCatalog(COURSE_CATALOG));
   const navigate = useNavigate();
@@ -508,9 +535,14 @@ const Chargesheet = () => {
   );
   const isRelieverDuty = selectedDutyRole?.key === "reliever";
 
+  const examOptionsForYear = useMemo(
+    () => EXAM_OPTIONS.map((option) => examOptionForYear(option, examYear)),
+    [examYear]
+  );
+
   const selectedExam = useMemo(
-    () => EXAM_OPTIONS.find((o) => o.key === form.examKey) || EXAM_OPTIONS[0],
-    [form.examKey]
+    () => examOptionsForYear.find((o) => o.key === form.examKey) || examOptionsForYear[0],
+    [examOptionsForYear, form.examKey]
   );
   const selectedExamRange = useMemo(
     () => ({ start: form.examStartDate || "", end: form.examEndDate || "" }),
@@ -604,28 +636,41 @@ const Chargesheet = () => {
     }
   };
 
+  const applyExamSelection = (nextExam) => {
+    const range = examRangeFor(nextExam);
+    const labRange = labExamRangeFor(nextExam);
+    setForm((p) => ({
+      ...p,
+      examKey: nextExam.key,
+      examStartDate: range.start,
+      examEndDate: range.end,
+      examPeriod: examPeriodText(range, nextExam.period),
+      examMonth: monthLabelFromDateKey(range.start, nextExam.month),
+      labExamStartDate: labRange.start,
+      labExamEndDate: labRange.end,
+      labExamPeriod: examPeriodText(labRange, ""),
+      courseKey: "",
+      courseCode: "",
+      courseTitle: "",
+    }));
+    setShowExamPeriodPicker(false);
+    setShowLabExamPeriodPicker(false);
+  };
+
+  const handleExamYearChange = (e) => {
+    const nextYear = Number(e.target.value) || DEFAULT_EXAM_YEAR;
+    setExamYear(nextYear);
+    const baseExam = EXAM_OPTIONS.find((o) => o.key === form.examKey) || EXAM_OPTIONS[0];
+    applyExamSelection(examOptionForYear(baseExam, nextYear));
+    setError("");
+    setSaved(false);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "examKey") {
-      const nextExam = EXAM_OPTIONS.find((o) => o.key === value) || EXAM_OPTIONS[0];
-      const range = examRangeFor(nextExam);
-      const labRange = labExamRangeFor(nextExam);
-      setForm((p) => ({
-        ...p,
-        examKey: value,
-        examStartDate: range.start,
-        examEndDate: range.end,
-        examPeriod: examPeriodText(range, nextExam.period),
-        examMonth: monthLabelFromDateKey(range.start, nextExam.month),
-        labExamStartDate: labRange.start,
-        labExamEndDate: labRange.end,
-        labExamPeriod: examPeriodText(labRange, ""),
-        courseKey: "",
-        courseCode: "",
-        courseTitle: "",
-      }));
-      setShowExamPeriodPicker(false);
-      setShowLabExamPeriodPicker(false);
+      const nextExam = examOptionsForYear.find((o) => o.key === value) || examOptionsForYear[0];
+      applyExamSelection(nextExam);
     } else {
       setForm((p) => ({ ...p, [name]: value }));
     }
@@ -642,7 +687,7 @@ const Chargesheet = () => {
       examMonth: monthLabelFromDateKey(range.start, selectedExam.month),
     }));
     if (range.start && range.end) {
-      saveStoredExamPeriod(selectedExam.key, range);
+      saveStoredExamPeriod(storedPeriodKey(selectedExam), range);
       setShowExamPeriodPicker(false);
     }
     setDutyDateKeys([]);
@@ -659,7 +704,7 @@ const Chargesheet = () => {
       labExamPeriod: examPeriodText(range, ""),
     }));
     if (range.start && range.end) {
-      saveStoredLabExamPeriod(selectedExam.key, range);
+      saveStoredLabExamPeriod(storedPeriodKey(selectedExam), range);
       setShowLabExamPeriodPicker(false);
     }
     setError("");
@@ -1567,8 +1612,18 @@ const Chargesheet = () => {
             <div className="cs-card-body">
               {/* Chips */}
               <div className="cs-section-divider"><span>Choose exam</span></div>
+              <div className="cs-grid2" style={{ marginBottom: 16 }}>
+                <label className="cs-field">
+                  <span>Exam Year</span>
+                  <select name="examYear" value={examYear} onChange={handleExamYearChange}>
+                    {EXAM_YEAR_OPTIONS.map((year) => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
               <div className="cs-exam-chips" style={{ marginBottom: 20 }}>
-                {EXAM_OPTIONS.map((opt) => {
+                {examOptionsForYear.map((opt) => {
                   const active = form.examKey === opt.key;
                   return (
                     <button
