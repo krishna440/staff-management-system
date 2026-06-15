@@ -273,6 +273,7 @@ function buildTeachingSheet(exam, allRows) {
     const staffName = staffRows[0]?.staffName || "";
 
     staffRows.forEach((row, index) => {
+      const rowNumber = rows.length + 1;
       const paperSets = Number(row.paperSets || 0);
       const assessments = Number(row.assessments || 0);
       const paperAmount = paperSettingAmountForRow(row);
@@ -283,10 +284,14 @@ function buildTeachingSheet(exam, allRows) {
           { value: index === 0 ? staffName : "", style: STYLE.text },
           { value: courseLabel(row), style: STYLE.text },
           { value: paperSets, style: STYLE.center },
-          { value: paperAmount, style: STYLE.amount },
+          { formula: `D${rowNumber}*${paperRateForRow(row)}`, value: paperAmount, style: STYLE.amount },
           { value: assessments, style: STYLE.center },
-          { value: assessmentAmount, style: STYLE.amount },
-          { value: index === 0 ? grandTotal : "", style: STYLE.total },
+          { formula: assessmentFormulaForRow(row, rowNumber), value: assessmentAmount, style: STYLE.amount },
+          {
+            formula: index === 0 ? `SUM(E${startRow}:E${startRow + staffRows.length - 1})+SUM(G${startRow}:G${startRow + staffRows.length - 1})` : "",
+            value: index === 0 ? grandTotal : "",
+            style: STYLE.total,
+          },
         ],
         height: 30,
       });
@@ -682,6 +687,14 @@ function teachingAmount(row) {
   );
 }
 
+function assessmentFormulaForRow(row, rowNumber) {
+  const rate = assessmentRateForRow(row);
+  if (row.examType === "Re-ESE") {
+    return `IF(F${rowNumber}>0,MAX(F${rowNumber}*${rate},200),0)`;
+  }
+  return `F${rowNumber}*${rate}`;
+}
+
 function hasDuty(row) {
   return Boolean(
     row.dutyRole ||
@@ -919,6 +932,12 @@ function cellXml(rawCell, rowNumber, columnNumber) {
   const ref = `${columnName(columnNumber)}${rowNumber}`;
   const style = cell.style ?? STYLE.normal;
   const value = cell.value;
+  const formula = typeof cell.formula === "string" ? cell.formula.replace(/^=/, "") : "";
+
+  if (formula) {
+    const cachedValue = typeof value === "number" && Number.isFinite(value) ? `<v>${value}</v>` : "";
+    return `<c r="${ref}" s="${style}"><f>${escapeXml(formula)}</f>${cachedValue}</c>`;
+  }
 
   if (value === null || value === undefined || value === "") {
     return `<c r="${ref}" s="${style}"/>`;
@@ -1034,6 +1053,7 @@ function workbookXml(sheets) {
     <workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/>
   </bookViews>
   <sheets>${sheetXml}</sheets>
+  <calcPr calcMode="auto"/>
 </workbook>`;
 }
 
