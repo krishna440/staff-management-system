@@ -748,7 +748,34 @@ function groupBy(items, getKey) {
 
 function groupedEntriesByStaffName(items) {
   return Array.from(groupBy(items, (row) => row.staffName || "Unknown").entries())
-    .sort(([nameA], [nameB]) => sortName(nameA).localeCompare(sortName(nameB), "en-IN"));
+    .sort(([nameA, rowsA], [nameB, rowsB]) => {
+      const rankSort = staffCategoryRank(rowsA) - staffCategoryRank(rowsB);
+      if (rankSort !== 0) return rankSort;
+      const senioritySort = seniorityValue(rowsA) - seniorityValue(rowsB);
+      if (senioritySort !== 0) return senioritySort;
+      return sortName(nameA).localeCompare(sortName(nameB), "en-IN");
+    });
+}
+
+function staffCategoryRank(rows) {
+  if (rows.some(isHodRow)) return 0;
+  if (rows.some(isCoordinatorRow)) return 1;
+  if (rows.some(isTeachingStaffRow)) return 2;
+  return 3;
+}
+
+function isHodRow(row) {
+  const role = String(row.dutyRole || "").toLowerCase().trim();
+  return role === "hod" || role.includes("head of department");
+}
+
+function isCoordinatorRow(row) {
+  const role = String(row.dutyRole || "").toLowerCase().trim();
+  return role.includes("coordinator");
+}
+
+function isTeachingStaffRow(row) {
+  return String(row.designation || "").toLowerCase() === "teaching";
 }
 
 function sortName(name) {
@@ -756,6 +783,14 @@ function sortName(name) {
     .replace(/^(prof\.?|dr\.?|mr\.?|mrs\.?|ms\.?|shri\.?|smt\.?)\s+/i, "")
     .trim()
     .toLowerCase();
+}
+
+function seniorityValue(rows) {
+  const dates = rows
+    .map((row) => new Date(row.dateOfJoining))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .map((date) => date.getTime());
+  return dates.length ? Math.min(...dates) : Number.MAX_SAFE_INTEGER;
 }
 
 function sum(items, getValue) {

@@ -11,6 +11,7 @@ const EMPTY_FORM = {
   email: "",
   department: "",
   designation: "",
+  dateOfJoining: "",
 };
 
 // ─── Palette tokens ────────────────────────────────────────────────
@@ -40,6 +41,31 @@ const TOKEN = {
 // ─── Helpers ───────────────────────────────────────────────────────
 const initials = (name = "") =>
   name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("");
+
+const formatDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const dateInputValue = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+};
+
+const sortValue = (row, key) => {
+  if (key === "dateOfJoining") {
+    const date = new Date(row.dateOfJoining);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+  }
+  return String(row[key] || "").toLowerCase();
+};
 
 const fieldIcon = {
   empId: (
@@ -82,7 +108,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
   const [error, setError] = useState(null);
   const [searchQ, setSearchQ] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
-  const [sortCol, setSortCol] = useState("name");
+  const [sortCol, setSortCol] = useState("dateOfJoining");
   const [sortDir, setSortDir] = useState(1);
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
@@ -124,7 +150,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
     if (searchQ) {
       const q = searchQ.toLowerCase();
       data = data.filter((s) =>
-        [s.name, s.empId, s.phone, s.email, s.designation, s.department].some((v) =>
+        [s.name, s.empId, s.phone, s.email, s.designation, s.department, formatDate(s.dateOfJoining)].some((v) =>
           String(v || "").toLowerCase().includes(q)
         )
       );
@@ -132,8 +158,8 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
     if (deptFilter) data = data.filter((s) => s.department === deptFilter);
     if (sortCol) {
       data = [...data].sort((a, b) => {
-        const av = String(a[sortCol] || "").toLowerCase();
-        const bv = String(b[sortCol] || "").toLowerCase();
+        const av = sortValue(a, sortCol);
+        const bv = sortValue(b, sortCol);
         return av < bv ? -sortDir : av > bv ? sortDir : 0;
       });
     }
@@ -154,6 +180,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
       email: member.email || "",
       department: member.department || "",
       designation: member.designation || "",
+      dateOfJoining: dateInputValue(member.dateOfJoining),
     });
     setError(null);
   };
@@ -196,8 +223,8 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
     doc.setFontSize(10);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 40, 22);
     autoTable(doc, {
-      head: [["Name", "Employee ID", "Phone", "Email", "Department", "Designation"]],
-      body: filtered.map((s) => [s.name || "", s.empId || "", s.phone || "", s.email || "", s.department || "", s.designation || ""]),
+      head: [["Name", "Employee ID", "Date Of Joining", "Phone", "Email", "Department", "Designation"]],
+      body: filtered.map((s) => [s.name || "", s.empId || "", formatDate(s.dateOfJoining) || "", s.phone || "", s.email || "", s.department || "", s.designation || ""]),
       startY: 34,
       styles: { fontSize: 8, overflow: "linebreak" },
     });
@@ -220,6 +247,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
 
   const cols = [
     { key: "name", label: "Name" },
+    { key: "dateOfJoining", label: "Date Of Joining" },
     { key: "department", label: "Department" },
     { key: "designation", label: "Designation" },
     { key: "phone", label: "Phone" },
@@ -371,6 +399,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
                   <div className="sd-card-meta">
                     {[
                       { icon: fieldIcon.empId, val: s.empId, fallback: "—" },
+                      { icon: fieldIcon.empId, val: formatDate(s.dateOfJoining) ? `Joined ${formatDate(s.dateOfJoining)}` : null, fallback: "—" },
                       { icon: fieldIcon.department, val: s.department, fallback: "—" },
                       { icon: fieldIcon.phone, val: s.phone, fallback: "—" },
                       { icon: fieldIcon.email, val: s.email, fallback: "—" },
@@ -424,7 +453,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={canManage ? 6 : 5} className="sd-empty">
+                  <td colSpan={canManage ? cols.length + 1 : cols.length} className="sd-empty">
                     <div className="sd-empty-ico">🔍</div>
                     <p>No staff found matching your filters.</p>
                   </td>
@@ -443,6 +472,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
                         </div>
                       </div>
                     </td>
+                    <td className="sd-contact">{formatDate(s.dateOfJoining) || "—"}</td>
                     <td>
                       {s.department ? (
                         <span className="sd-dept-chip" style={{ background: tok.badge, color: tok.badgeTxt }}>
@@ -509,12 +539,12 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
               {[
                 { key: "name", label: "Full Name", placeholder: "e.g. Dr. Anita Sharma", required: true },
                 { key: "empId", label: "Employee ID", placeholder: "e.g. EMP-2024-001", required: true },
+                { key: "dateOfJoining", label: "Date Of Joining", type: "date" },
                 { key: "phone", label: "Phone Number", placeholder: "e.g. +91 98765 43210", required: true },
                 { key: "email", label: "Email Address", placeholder: "e.g. anita@vjti.ac.in" },
                 { key: "department", label: "Department", placeholder: "e.g. Computer Engineering" },
                 { key: "designation", label: "Designation", placeholder: "e.g. Associate Professor" },
-                
-              ].map(({ key, label, placeholder, required }) => (
+              ].map(({ key, label, placeholder, required, type = "text" }) => (
                 <label key={key} className="sd-field">
                   <span className="sd-field-label">
                     {label}
@@ -522,6 +552,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
                   </span>
                   <input
                     className="sd-field-input"
+                    type={type}
                     value={editForm[key]}
                     placeholder={placeholder}
                     onChange={(e) => updateEditField(key, e.target.value)}

@@ -16,6 +16,7 @@ const initialForm = {
   designation: "",
   type: "Teaching",
   empId: "",
+  dateOfJoining: "",
   photo: null,
 };
 
@@ -70,6 +71,7 @@ export default function AddStaff() {
       formData.append("designation", form.designation);
       formData.append("type", form.type);
       formData.append("empId", form.empId);
+      formData.append("dateOfJoining", form.dateOfJoining || "");
       if (form.photo) formData.append("photo", form.photo);
 
       await API.post("/staff", formData, {
@@ -186,6 +188,11 @@ export default function AddStaff() {
               <input name="empId" value={form.empId} onChange={handleChange}
                 placeholder="e.g. EMP-001"
                 style={{ ...s.input, ...(errors.empId ? s.inputErr : {}) }} />
+            </Field>
+
+            <Field label="Date Of Joining" error={errors.dateOfJoining}>
+              <input name="dateOfJoining" type="date" value={form.dateOfJoining} onChange={handleChange}
+                style={{ ...s.input, ...(errors.dateOfJoining ? s.inputErr : {}) }} />
             </Field>
 
             <Field label="Phone Number" error={errors.phone}>

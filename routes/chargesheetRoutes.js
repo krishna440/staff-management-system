@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Chargesheet = require("../models/chargesheet");
+const Staff = require("../models/staff");
 
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry.assessments) || 0;
@@ -67,12 +68,14 @@ function totalAmountForEntry(entry) {
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
+    const staff = data.staffId ? await Staff.findById(data.staffId).select("dateOfJoining") : null;
     const payableDutyDays = payableDutyDaysForEntry(data);
     const dutyAmount = dutyAmountForEntry({ ...data, payableDutyDays });
     const total = totalAmountForEntry(data);
 
     const newEntry = new Chargesheet({
       ...data,
+      dateOfJoining: data.dateOfJoining || staff?.dateOfJoining || null,
       payableDutyDays,
       dutyAmount,
       total,
@@ -90,8 +93,16 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const query = req.query.month ? { month: req.query.month } : {};
-    const data = await Chargesheet.find(query).sort({ _id: -1 });
-    res.json(data.map((entry) => ({ ...entry.toObject(), total: totalAmountForEntry(entry) })));
+    const data = await Chargesheet.find(query).populate("staffId", "dateOfJoining").sort({ _id: -1 });
+    res.json(data.map((entry) => {
+      const obj = entry.toObject();
+      return {
+        ...obj,
+        staffId: obj.staffId?._id || obj.staffId,
+        dateOfJoining: obj.dateOfJoining || obj.staffId?.dateOfJoining || null,
+        total: totalAmountForEntry(entry),
+      };
+    }));
   } catch (err) {
     res.status(500).json({ message: "Error fetching chargesheets" });
   }

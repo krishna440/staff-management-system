@@ -13,7 +13,8 @@ exports.addStaff = async (req, res) => {
       department,
       designation,
       type,
-      empId
+      empId,
+      dateOfJoining
     } = req.body;
 
     // Validation
@@ -29,6 +30,7 @@ exports.addStaff = async (req, res) => {
       designation,
       type,
       empId,
+      dateOfJoining: dateOfJoining || null,
       photo: req.file ? req.file.filename : ""
     });
 
@@ -58,9 +60,14 @@ exports.getStaff = async (req, res) => {
 // Update Staff
 exports.updateStaff = async (req, res) => {
   try {
+    const updates = { ...req.body };
+    if (Object.prototype.hasOwnProperty.call(updates, "dateOfJoining")) {
+      updates.dateOfJoining = updates.dateOfJoining || null;
+    }
+
     const updated = await Staff.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updates,
       { new: true }
     );
     if (!updated) {

@@ -8,6 +8,7 @@ const staffSchema = new mongoose.Schema({
   designation: String,
   type: String,
   empId: String,
+  dateOfJoining: Date,
   photo: String,
 }, { timestamps: true });
 
