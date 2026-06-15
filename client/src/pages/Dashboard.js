@@ -131,6 +131,7 @@ const Dashboard = () => {
   const [editForm, setEditForm] = useState(null);
   const [entrySaving, setEntrySaving] = useState(false);
   const [selectedEntryIds, setSelectedEntryIds] = useState([]);
+  const [entrySearch, setEntrySearch] = useState("");
 
   const handleLogout = () => {
     sessionStorage.removeItem("user");
@@ -386,12 +387,31 @@ const Dashboard = () => {
 
   const visibleEntries =
     data?.chargesheets && data.chargesheets.length > 0 ? data.chargesheets : chargesheets;
+  const normalizedEntrySearch = entrySearch.trim().toLowerCase();
+  const searchedVisibleEntries = normalizedEntrySearch
+    ? visibleEntries.filter((entry) =>
+        [
+          entry.staffName,
+          entry.designation,
+          entry.staffDesignation,
+          entry.courseCode,
+          entry.courseTitle,
+          entry.dutyRole,
+          entry.examLabel,
+          entry.examType,
+          entry.examMonth,
+          entry.month,
+          entry.status,
+          entryWorkLabel(entry),
+        ].some((value) => String(value || "").toLowerCase().includes(normalizedEntrySearch))
+      )
+    : visibleEntries;
   const submittedEntries = visibleEntries.filter((entry) => entry.status === "Submitted").length;
   const pendingEntries = visibleEntries.filter((entry) => entry.status !== "Submitted").length;
   const teachingShare = data?.grandTotal
     ? Math.round((Number(data.teachingTotal || 0) / Number(data.grandTotal || 1)) * 100)
     : 0;
-  const visibleEntryIds = visibleEntries.map((entry) => entry._id);
+  const visibleEntryIds = searchedVisibleEntries.map((entry) => entry._id);
   const selectedVisibleCount = selectedEntryIds.filter((id) => visibleEntryIds.includes(id)).length;
   const allVisibleSelected =
     visibleEntryIds.length > 0 && visibleEntryIds.every((id) => selectedEntryIds.includes(id));
@@ -958,6 +978,14 @@ const Dashboard = () => {
         }
         .cs-card-title { font-size: 14px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
         .cs-card-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .entry-search {
+          width: min(280px, 60vw); border: 1px solid #dbe3ef; border-radius: 9px;
+          background: #fff; color: #0f172a; padding: 8px 11px;
+          font: inherit; font-size: 12px; outline: none;
+        }
+        .entry-search:focus {
+          border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+        }
         .bulk-select-control { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; color: #64748b; }
         .entry-select-box {
           width: 16px; height: 16px; accent-color: #3C3489; cursor: pointer; flex-shrink: 0;
@@ -1442,6 +1470,14 @@ const Dashboard = () => {
                       MCA Department — Exam Sheet Status
                     </div>
                     <div className="cs-card-tools">
+                      <input
+                        type="search"
+                        className="entry-search"
+                        value={entrySearch}
+                        onChange={(event) => setEntrySearch(event.target.value)}
+                        placeholder="Search name, subject, duty, status..."
+                        aria-label="Search dashboard entries"
+                      />
                       {canManageEntries && visibleEntryIds.length > 0 && (
                         <>
                           <label className="bulk-select-control">
@@ -1467,9 +1503,10 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  {data.chargesheets && data.chargesheets.length > 0 ? (
-                    data.chargesheets.map((cs) => {
+                  {searchedVisibleEntries.length > 0 ? (
+                    searchedVisibleEntries.map((cs) => {
                       const { prog, chip, color } = statusMeta(cs.status);
+                      const taskCount = Number(cs.taskCount || 1);
                       return (
                         <div className="cs-row" key={cs._id}>
                           {canManageEntries && (
@@ -1488,7 +1525,7 @@ const Dashboard = () => {
                           </div>
                           <div className="cs-prog-col">
                             <div className="cs-count">
-                              {cs.taskCount} task{cs.taskCount !== 1 ? "s" : ""} assigned
+                              {taskCount} task{taskCount !== 1 ? "s" : ""} assigned
                             </div>
                             <div className="prog-track">
                               <div className="prog-fill" style={{ width: `${prog}%`, background: color }} />
@@ -1513,7 +1550,7 @@ const Dashboard = () => {
                     })
                   ) : (
                     <div className="empty-row">
-                      {chargesheets.length > 0 ? (
+                      {!normalizedEntrySearch && chargesheets.length > 0 ? (
                         chargesheets.map((c) => (
                           <div
                             key={c._id}
@@ -1558,7 +1595,9 @@ const Dashboard = () => {
                         ))
                       ) : (
                         <div style={{ padding: "32px 20px", textAlign: "center", fontSize: 13, color: "#94a3b8" }}>
-                          No chargesheets found for this month.
+                          {normalizedEntrySearch
+                            ? `No entries match "${entrySearch.trim()}".`
+                            : "No chargesheets found for this month."}
                         </div>
                       )}
                     </div>
