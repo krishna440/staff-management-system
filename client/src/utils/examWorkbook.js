@@ -125,7 +125,7 @@ export async function downloadExamWorkbook(chargesheets, options = {}) {
     });
   }
 
-  const workbookBlob = buildXlsx(uniquifySheetNames(sheets));
+  const workbookBlob = await buildXlsx(uniquifySheetNames(sheets));
   const url = URL.createObjectURL(workbookBlob);
   const link = document.createElement("a");
   link.href = url;
@@ -805,7 +805,7 @@ function formatDate(date) {
   ].join(".");
 }
 
-function buildXlsx(sheets) {
+async function buildXlsx(sheets) {
   const worksheetEntries = sheets.map((sheet, index) => ({
     name: `xl/worksheets/sheet${index + 1}.xml`,
     content: worksheetXml(sheet),
@@ -815,16 +815,14 @@ function buildXlsx(sheets) {
     { name: "[Content_Types].xml", content: contentTypesXml(sheets.length) },
     { name: "_rels/.rels", content: rootRelsXml() },
     { name: "docProps/core.xml", content: docPropsCoreXml() },
-    { name: "docProps/app.xml", content: docPropsAppXml() },
+    { name: "docProps/app.xml", content: docPropsAppXml(sheets.length) },
     { name: "xl/workbook.xml", content: workbookXml(sheets) },
     { name: "xl/_rels/workbook.xml.rels", content: workbookRelsXml(sheets.length) },
     { name: "xl/styles.xml", content: stylesXml() },
     ...worksheetEntries,
   ];
 
-  return new Blob([zip(entries)], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
+  return zipToBlob(entries);
 }
 
 function worksheetXml(sheet) {
@@ -877,7 +875,26 @@ function cellXml(rawCell, rowNumber, columnNumber) {
     return `<c r="${ref}" s="${style}"><v>${value}</v></c>`;
   }
 
-  return `<c r="${ref}" s="${style}" t="inlineStr"><is><t>${escapeXml(String(value))}</t></is></c>`;
+  return `<c r="${ref}" s="${style}" t="inlineStr"><is>${inlineTextXml(String(value))}</is></c>`;
+}
+
+function inlineTextXml(value) {
+  const text = sanitizePlainTextForXml(String(value))
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+  const needsPreserve = /[\n\t]/.test(text) || text !== text.trim();
+  let encoded = "";
+  for (const ch of text) {
+    if (ch === "&") encoded += "&amp;";
+    else if (ch === "<") encoded += "&lt;";
+    else if (ch === ">") encoded += "&gt;";
+    else if (ch === '"') encoded += "&quot;";
+    else if (ch === "\n") encoded += "&#10;";
+    else if (ch === "\t") encoded += "&#9;";
+    else encoded += ch;
+  }
+  const preserveAttr = needsPreserve ? ' xml:space="preserve"' : "";
+  return `<t${preserveAttr}>${encoded}</t>`;
 }
 
 function columnName(columnNumber) {
@@ -920,10 +937,24 @@ function docPropsCoreXml() {
 </cp:coreProperties>`;
 }
 
-function docPropsAppXml() {
+function docPropsAppXml(sheetCount) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
-  <Application>Staff Management System</Application>
+  <Application>Microsoft Excel</Application>
+  <DocSecurity>0</DocSecurity>
+  <ScaleCrop>false</ScaleCrop>
+  <HeadingPairs>
+    <vt:vector size="2" baseType="variant">
+      <vt:variant><vt:lpstr>Worksheets</vt:lpstr></vt:variant>
+      <vt:variant><vt:i4>${sheetCount}</vt:i4></vt:variant>
+    </vt:vector>
+  </HeadingPairs>
+  <TitlesOfParts>
+    <vt:vector size="${sheetCount}" baseType="lpstr">
+      ${Array.from({ length: sheetCount }, () => "<vt:lpstr>Sheet</vt:lpstr>").join("")}
+    </vt:vector>
+  </TitlesOfParts>
+  <Company>MCA Department</Company>
 </Properties>`;
 }
 
@@ -945,6 +976,10 @@ function workbookXml(sheets) {
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <workbookPr date1904="false"/>
+  <bookViews>
+    <workbookView xWindow="0" yWindow="0" windowWidth="24000" windowHeight="12000"/>
+  </bookViews>
   <sheets>${sheetXml}</sheets>
 </workbook>`;
 }
@@ -978,6 +1013,7 @@ function stylesXml() {
     <border><left/><right/><top/><bottom/><diagonal/></border>
     <border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border>
   </borders>
+  <numFmts count="0"/>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
   <cellXfs count="12">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
@@ -994,7 +1030,15 @@ function stylesXml() {
     <xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" vertical="center"/></xf>
   </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+  <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
 </styleSheet>`;
+}
+
+function zipToBlob(entries) {
+  const zipBytes = zip(entries);
+  return new Blob([zipBytes], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 
 function zip(entries) {
@@ -1003,6 +1047,7 @@ function zip(entries) {
   const centralRecords = [];
   let offset = 0;
   const { time, date } = zipDosDateTime(new Date());
+  const utf8Flag = 0x0800;
 
   entries.forEach((entry) => {
     const nameBytes = encoder.encode(entry.name);
@@ -1013,8 +1058,8 @@ function zip(entries) {
     const localHeader = new Uint8Array(30 + nameBytes.length);
     const localView = new DataView(localHeader.buffer);
     localView.setUint32(0, 0x04034b50, true);
-    localView.setUint16(4, 10, true);
-    localView.setUint16(6, 0, true);
+    localView.setUint16(4, 20, true);
+    localView.setUint16(6, utf8Flag, true);
     localView.setUint16(8, 0, true);
     localView.setUint16(10, time, true);
     localView.setUint16(12, date, true);
@@ -1029,8 +1074,8 @@ function zip(entries) {
     const centralView = new DataView(centralHeader.buffer);
     centralView.setUint32(0, 0x02014b50, true);
     centralView.setUint16(4, 20, true);
-    centralView.setUint16(6, 10, true);
-    centralView.setUint16(8, 0, true);
+    centralView.setUint16(6, 20, true);
+    centralView.setUint16(8, utf8Flag, true);
     centralView.setUint16(10, 0, true);
     centralView.setUint16(12, time, true);
     centralView.setUint16(14, date, true);
@@ -1042,7 +1087,7 @@ function zip(entries) {
     centralView.setUint16(32, 0, true);
     centralView.setUint16(34, 0, true);
     centralView.setUint16(36, 0, true);
-    centralView.setUint32(38, 0, true);
+    centralView.setUint32(38, 0x20, true);
     centralView.setUint32(42, offset, true);
     centralHeader.set(nameBytes, 46);
 
@@ -1061,6 +1106,7 @@ function zip(entries) {
   endView.setUint16(10, entries.length, true);
   endView.setUint32(12, centralSize, true);
   endView.setUint32(16, offset, true);
+  endView.setUint16(20, 0, true);
 
   return concatUint8([...fileRecords, ...centralRecords, end]);
 }
