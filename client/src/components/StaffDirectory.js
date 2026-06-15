@@ -513,6 +513,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
                 { key: "email", label: "Email Address", placeholder: "e.g. anita@vjti.ac.in" },
                 { key: "department", label: "Department", placeholder: "e.g. Computer Engineering" },
                 { key: "designation", label: "Designation", placeholder: "e.g. Associate Professor" },
+                
               ].map(({ key, label, placeholder, required }) => (
                 <label key={key} className="sd-field">
                   <span className="sd-field-label">

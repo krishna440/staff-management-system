@@ -216,13 +216,6 @@ export default function AddStaff() {
                 placeholder="abc@mc.vjti.ac.in"
                 style={{ ...s.input, ...(errors.email ? s.inputErr : {}) }} />
             </Field>
-
-            <Field label="Date_Of_Joining" error={errors.Date_Of_Joining}>
-              <input name="Date_Of_Joining" value={form.Date_Of_Joining} onChange={handleChange}
-                placeholder="2003, 2005"
-                style={{ ...s.input, ...(errors.Date_Of_Joining ? s.inputErr : {}) }} />
-            </Field>
-
           </div>
         </div>
 

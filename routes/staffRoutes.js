@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ IMPORTANT (multer here)
+// IMPORTANT (multer here)
 router.post("/", upload.single("photo"), addStaff);
 
 router.get("/", getStaff);

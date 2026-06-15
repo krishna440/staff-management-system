@@ -8,7 +8,7 @@ const staffSchema = new mongoose.Schema({
   designation: String,
   type: String,
   empId: String,
-  photo: String
+  photo: String,
 }, { timestamps: true });
 
 module.exports = mongoose.model("Staff", staffSchema);
