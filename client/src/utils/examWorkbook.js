@@ -766,16 +766,25 @@ function staffCategoryRank(rows) {
 
 function isHodRow(row) {
   const role = String(row.dutyRole || "").toLowerCase().trim();
-  return role === "hod" || role.includes("head of department");
+  const designation = staffDesignationValue(row);
+  return role === "hod" || role.includes("head of department") || /\bhod\b/.test(designation) || designation.includes("head of department");
 }
 
 function isCoordinatorRow(row) {
   const role = String(row.dutyRole || "").toLowerCase().trim();
-  return role.includes("coordinator");
+  const designation = staffDesignationValue(row);
+  return role.includes("coordinator") || role.includes("co-ordinator") || designation.includes("coordinator") || designation.includes("co-ordinator");
 }
 
 function isTeachingStaffRow(row) {
   return String(row.designation || "").toLowerCase() === "teaching";
+}
+
+function staffDesignationValue(row) {
+  const value = row.staffDesignation || (!["teaching", "non-teaching"].includes(String(row.designation || "").toLowerCase())
+    ? row.designation
+    : "");
+  return String(value || "").toLowerCase().trim();
 }
 
 function sortName(name) {
@@ -998,6 +1007,7 @@ function workbookRelsXml(sheetCount) {
 function stylesXml() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="0"/>
   <fonts count="4">
     <font><sz val="11"/><name val="Times New Roman"/></font>
     <font><b/><sz val="14"/><name val="Times New Roman"/></font>
@@ -1013,7 +1023,6 @@ function stylesXml() {
     <border><left/><right/><top/><bottom/><diagonal/></border>
     <border><left style="thin"><color indexed="64"/></left><right style="thin"><color indexed="64"/></right><top style="thin"><color indexed="64"/></top><bottom style="thin"><color indexed="64"/></bottom><diagonal/></border>
   </borders>
-  <numFmts count="0"/>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
   <cellXfs count="12">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>

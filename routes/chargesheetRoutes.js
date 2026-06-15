@@ -68,7 +68,7 @@ function totalAmountForEntry(entry) {
 router.post("/", async (req, res) => {
   try {
     const data = req.body;
-    const staff = data.staffId ? await Staff.findById(data.staffId).select("dateOfJoining") : null;
+    const staff = data.staffId ? await Staff.findById(data.staffId).select("dateOfJoining designation") : null;
     const payableDutyDays = payableDutyDaysForEntry(data);
     const dutyAmount = dutyAmountForEntry({ ...data, payableDutyDays });
     const total = totalAmountForEntry(data);
@@ -76,6 +76,7 @@ router.post("/", async (req, res) => {
     const newEntry = new Chargesheet({
       ...data,
       dateOfJoining: data.dateOfJoining || staff?.dateOfJoining || null,
+      staffDesignation: data.staffDesignation || staff?.designation || "",
       payableDutyDays,
       dutyAmount,
       total,
@@ -93,13 +94,14 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const query = req.query.month ? { month: req.query.month } : {};
-    const data = await Chargesheet.find(query).populate("staffId", "dateOfJoining").sort({ _id: -1 });
+    const data = await Chargesheet.find(query).populate("staffId", "dateOfJoining designation").sort({ _id: -1 });
     res.json(data.map((entry) => {
       const obj = entry.toObject();
       return {
         ...obj,
         staffId: obj.staffId?._id || obj.staffId,
         dateOfJoining: obj.dateOfJoining || obj.staffId?.dateOfJoining || null,
+        staffDesignation: obj.staffDesignation || obj.staffId?.designation || "",
         total: totalAmountForEntry(entry),
       };
     }));
@@ -136,6 +138,8 @@ router.put("/:id", async (req, res) => {
     }
 
     const updates = { ...req.body };
+    const staffId = updates.staffId || existing.staffId;
+    const staff = staffId ? await Staff.findById(staffId).select("dateOfJoining designation") : null;
     [
       "paperSets",
       "paperSetRate",
@@ -154,6 +158,8 @@ router.put("/:id", async (req, res) => {
     });
 
     Object.assign(existing, updates);
+    existing.dateOfJoining = existing.dateOfJoining || staff?.dateOfJoining || null;
+    existing.staffDesignation = existing.staffDesignation || staff?.designation || "";
     existing.payableDutyDays = payableDutyDaysForEntry(existing);
     existing.total = totalAmountForEntry(existing);
     existing.dutyAmount = dutyAmountForEntry(existing);

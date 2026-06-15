@@ -13,6 +13,7 @@ const chargesheetSchema = new mongoose.Schema({
 
   staffName: String,
   designation: String,
+  staffDesignation: String,
   dateOfJoining: Date,
 
   academicYear: String,

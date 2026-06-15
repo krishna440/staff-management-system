@@ -151,6 +151,7 @@ const STATIC_FORM_FIELDS = {
   staffId: "",
   staffName: "",
   designation: "",
+  staffDesignation: "",
   dateOfJoining: "",
   courseKey: "",
   courseCode: "",
@@ -728,7 +729,7 @@ const Chargesheet = () => {
   const handleStaffSelect = (e) => {
     const selected = staff.find((s) => s._id === e.target.value);
     if (!selected) {
-      setForm((p) => ({ ...p, staffId: "", staffName: "", designation: "", dateOfJoining: "" }));
+      setForm((p) => ({ ...p, staffId: "", staffName: "", designation: "", staffDesignation: "", dateOfJoining: "" }));
       return;
     }
     setForm((p) => ({
@@ -736,6 +737,7 @@ const Chargesheet = () => {
       staffId: selected._id,
       staffName: selected.name,
       designation: selected.type.toLowerCase(),
+      staffDesignation: selected.designation || "",
       dateOfJoining: selected.dateOfJoining || "",
     }));
   };
