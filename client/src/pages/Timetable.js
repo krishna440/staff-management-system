@@ -367,6 +367,58 @@ export default function Timetable() {
     setTimeout(() => setDownloading(""), 600);
   };
 
+  const downloadTheoryDutySheetPdf = async (source = currentTimetable()) => {
+    const s = source.settings;
+    const rows = (source.theoryRows || []).filter(
+      (row) => row.date || row.courseCode || row.courseTitle || row.roomA || row.roomB || row.reliever
+    );
+    const docSemLabel = s.semester.replace("Sem ", "Sem-");
+    setDownloading("duty-sheet");
+    const doc = makeDoc("l");
+    const width = doc.internal.pageSize.getWidth();
+
+    doc.setFont("times", "bold");
+    doc.setFontSize(14);
+    doc.text(timetableTitle(s).toUpperCase(), width / 2, 34, { align: "center" });
+
+    autoTable(doc, {
+      startY: 48,
+      margin: { left: 22, right: 22 },
+      theme: "grid",
+      head: [[
+        "Date",
+        "Subject",
+        "Classroom",
+        "Supervision\nDuty",
+        "Sign",
+        "Reliever",
+        "Sign",
+        "Subject\nTeacher",
+        "Absent\nStudents",
+        "Total Answer\nSheets",
+        "Faculty Sign\nwith Date",
+        "Peon\nSign",
+        "Clerk\nSign",
+      ]],
+      body: theoryDutySheetBody(rows),
+      styles: {
+        ...tableStyles(7),
+        cellPadding: 3,
+        minCellHeight: 34,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        ...headStyles(),
+        fontSize: 7,
+        minCellHeight: 36,
+      },
+      columnStyles: theoryDutySheetColumnStyles(),
+    });
+
+    doc.save(`MCA_${s.examType}_${docSemLabel}_Theory_Duty_Sheet.pdf`);
+    setTimeout(() => setDownloading(""), 600);
+  };
+
   const downloadLabPdf = async (source = currentTimetable()) => {
     const s = source.settings;
     const rows = source.labRows || [];
@@ -418,6 +470,7 @@ export default function Timetable() {
   const downloadSavedTimetable = async (item) => {
     await downloadTheoryPdf(item);
     await downloadSupervisionPdf(item);
+    await downloadTheoryDutySheetPdf(item);
     await downloadLabPdf(item);
   };
 
@@ -745,6 +798,7 @@ export default function Timetable() {
                     <div className="tt-saved-actions">
                       <button className="tt-mini-action" onClick={() => setPreviewTimetable(item)}>Preview</button>
                       <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}>Edit</button>
+                      <button className="tt-mini-action" onClick={() => downloadTheoryDutySheetPdf(item)}>Duty Sheet</button>
                       <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}>Download</button>
                       <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id || item._id)} title="Delete saved timetable">X</button>
                     </div>
@@ -810,6 +864,14 @@ export default function Timetable() {
                 desc="Includes invigilator assignments (landscape)"
                 loading={downloading === "supervision"}
                 onClick={() => downloadSupervisionPdf()}
+              />
+              <ExportCard
+                icon="DS"
+                color="#0f766e"
+                title="Theory Duty Sheet"
+                desc="Classroom duty register with blank signature columns"
+                loading={downloading === "duty-sheet"}
+                onClick={() => downloadTheoryDutySheetPdf()}
               />
               <ExportCard
                 icon="LAB"
@@ -951,6 +1013,39 @@ function labTableBody(rows, slots) {
       ...slotCells,
     ];
   });
+}
+function theoryDutySheetBody(rows) {
+  return rows.flatMap((row) => {
+    const sharedCellStyles = { halign: "center", valign: "middle" };
+    return [
+      [
+        { content: displayDate(row.date), rowSpan: 2, styles: sharedCellStyles },
+        { content: courseLine(row), rowSpan: 2, styles: { valign: "middle" } },
+        "AL301",
+        row.roomA || "",
+        "",
+        { content: row.reliever || "", rowSpan: 2, styles: sharedCellStyles },
+        { content: "", rowSpan: 2 },
+        { content: "", rowSpan: 2 },
+        { content: "", rowSpan: 2 },
+        { content: "", rowSpan: 2 },
+        { content: "", rowSpan: 2 },
+        { content: "", rowSpan: 2 },
+        { content: "", rowSpan: 2 },
+      ],
+      ["AL207", row.roomB || "", ""],
+    ];
+  });
+}
+function theoryDutySheetColumnStyles() {
+  const widths = [58, 122, 44, 72, 46, 68, 46, 68, 48, 54, 66, 48, 48];
+  return widths.reduce((styles, cellWidth, index) => {
+    styles[index] = {
+      cellWidth,
+      halign: index === 1 || index === 3 ? "left" : "center",
+    };
+    return styles;
+  }, {});
 }
 function todayInput() { return new Date().toISOString().slice(0, 10); }
 function tableStyles(fs) { return { font: "times", fontSize: fs, textColor: [0,0,0], lineColor: [0,0,0], lineWidth: 0.35, cellPadding: 5, valign: "middle" }; }
