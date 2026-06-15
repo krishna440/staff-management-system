@@ -771,20 +771,24 @@ function groupedEntriesByStaffName(items) {
 }
 
 function staffCategoryRank(rows) {
-  if (rows.some(isHodRow)) return 0;
+  if (rows.some(isOfficialHodRow)) return 0;
   if (rows.some(isCoordinatorRow)) return 1;
   if (rows.some(isTeachingStaffRow)) return 2;
   return 3;
 }
 
-function isHodRow(row) {
-  const role = String(row.dutyRole || "").toLowerCase().trim();
+function isOfficialHodRow(row) {
   const designation = staffDesignationValue(row);
-  return role === "hod" ||
-    role.includes("head of department") ||
-    /\bhod\b/.test(designation) ||
+  return /\bhod\b/.test(designation) ||
     designation.includes("head of department") ||
     sortName(row.staffName) === "archana pai";
+}
+
+function isHodRow(row) {
+  const role = String(row.dutyRole || "").toLowerCase().trim();
+  return role === "hod" ||
+    role.includes("head of department") ||
+    isOfficialHodRow(row);
 }
 
 function isCoordinatorRow(row) {
