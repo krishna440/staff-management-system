@@ -1095,7 +1095,7 @@ function theoryDutySheetBody(rows) {
         "AL301",
         row.roomA || "",
         "",
-        { content: row.reliever || "", rowSpan: 2, styles: sharedCellStyles },
+        row.reliever || "",
         { content: "", rowSpan: 2 },
         { content: "", rowSpan: 2 },
         { content: "", rowSpan: 2 },
@@ -1104,7 +1104,7 @@ function theoryDutySheetBody(rows) {
         { content: "", rowSpan: 2 },
         { content: "", rowSpan: 2 },
       ],
-      ["AL207", row.roomB || "", ""],
+      ["AL207", row.roomB || "", "", ""],
     ];
   });
 }
