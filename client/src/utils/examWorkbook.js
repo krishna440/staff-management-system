@@ -270,6 +270,7 @@ function buildTeachingSheet(exam, allRows) {
   groupedEntriesByStaffName(teachingRows).forEach(([, staffRows]) => {
     const startRow = rows.length + 1;
     const grandTotal = sum(staffRows, (row) => teachingAmount(row));
+    const staffName = staffRows[0]?.staffName || "";
 
     staffRows.forEach((row, index) => {
       const paperSets = Number(row.paperSets || 0);
@@ -278,8 +279,8 @@ function buildTeachingSheet(exam, allRows) {
       const assessmentAmount = assessmentAmountForRow(row);
       rows.push({
         cells: [
-          { value: sr, style: STYLE.center },
-          { value: row.staffName || "", style: STYLE.text },
+          { value: index === 0 ? sr : "", style: STYLE.center },
+          { value: index === 0 ? staffName : "", style: STYLE.text },
           { value: courseLabel(row), style: STYLE.text },
           { value: paperSets, style: STYLE.center },
           { value: paperAmount, style: STYLE.amount },
@@ -289,10 +290,12 @@ function buildTeachingSheet(exam, allRows) {
         ],
         height: 30,
       });
-      sr += 1;
     });
+    sr += 1;
 
     if (staffRows.length > 1) {
+      merges.push(`A${startRow}:A${startRow + staffRows.length - 1}`);
+      merges.push(`B${startRow}:B${startRow + staffRows.length - 1}`);
       merges.push(`H${startRow}:H${startRow + staffRows.length - 1}`);
     }
   });
@@ -326,7 +329,7 @@ function buildSupportSheet(exam, allRows) {
   rows.push({
     cells: [
       "No",
-      "Name",
+      "Name / Duty",
       "Remuneration per\nSession (I)",
       "Exam Dates",
       "Total Days (II)",
@@ -344,12 +347,13 @@ function buildSupportSheet(exam, allRows) {
     if (supportItems.length === 0) return;
     const startRow = rows.length + 1;
     const grandTotal = sum(supportItems, (item) => item.amount);
+    const staffName = staffRows[0]?.staffName || supportItems[0]?.staffName || "";
 
     supportItems.forEach((item, index) => {
       rows.push({
         cells: [
-          { value: sr, style: STYLE.center },
-          { value: item.name, style: STYLE.text },
+          { value: index === 0 ? sr : "", style: STYLE.center },
+          { value: supportItemDisplayName(staffName, item, index), style: STYLE.text },
           { value: item.rate, style: STYLE.amount },
           { value: item.dates, style: STYLE.center },
           { value: item.days, style: STYLE.center },
@@ -358,11 +362,12 @@ function buildSupportSheet(exam, allRows) {
         ],
         height: 30,
       });
-      sr += 1;
       writtenItems += 1;
     });
+    sr += 1;
 
     if (supportItems.length > 1) {
+      merges.push(`A${startRow}:A${startRow + supportItems.length - 1}`);
       merges.push(`G${startRow}:G${startRow + supportItems.length - 1}`);
     }
   });
@@ -548,8 +553,11 @@ function supportItemsForRow(row, exam) {
   const invigilation = standaloneMovedToConduction ? 0 : Number(row.invigilation || 0);
 
   if (calculatedDuty > 0 || row.dutyRole || row.dutyDates) {
+    const label = dutyLabelForRow(row);
     supportItems.push({
-      name: `${dutyLabelForRow(row)} - ${row.staffName || ""}`,
+      label,
+      staffName: row.staffName || "",
+      name: `${label} - ${row.staffName || ""}`,
       rate: Number(row.dutyRate || 0),
       dates: row.dutyDates || row.examPeriod || exam.period,
       days: payableDutyDays(row),
@@ -557,8 +565,11 @@ function supportItemsForRow(row, exam) {
     });
   }
   if (conduction > 0) {
+    const label = conductionLabelForRow(row);
     supportItems.push({
-      name: `${conductionLabelForRow(row)} - ${row.staffName || ""}`,
+      label,
+      staffName: row.staffName || "",
+      name: `${label} - ${row.staffName || ""}`,
       rate: conduction,
       dates: row.examPeriod || exam.period,
       days: 1,
@@ -566,8 +577,11 @@ function supportItemsForRow(row, exam) {
     });
   }
   if (invigilation > 0) {
+    const label = "Invigilation / Reliever";
     supportItems.push({
-      name: `Invigilation / Reliever - ${row.staffName || ""}`,
+      label,
+      staffName: row.staffName || "",
+      name: `${label} - ${row.staffName || ""}`,
       rate: invigilation,
       dates: row.examPeriod || exam.period,
       days: 1,
@@ -576,6 +590,8 @@ function supportItemsForRow(row, exam) {
   }
   if (supportItems.length === 0 && Number(row.total || 0) > 0) {
     supportItems.push({
+      label: "Exam Duty",
+      staffName: row.staffName || "",
       name: row.staffName || "",
       rate: Number(row.total || 0),
       dates: row.examPeriod || exam.period,
@@ -584,6 +600,13 @@ function supportItemsForRow(row, exam) {
     });
   }
   return supportItems;
+}
+
+function supportItemDisplayName(staffName, item, index) {
+  const label = item.label || item.name || "Exam Duty";
+  return index === 0
+    ? [staffName, label].filter(Boolean).join("\n")
+    : label;
 }
 
 function commonHeadingRows(exam, columnCount, rowsForExam = []) {
