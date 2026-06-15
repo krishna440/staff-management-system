@@ -19,6 +19,9 @@ const DEFAULT_THEORY_ROW = {
   time: "01:15 PM - 4:15 PM",
   courseCode: "",
   courseTitle: "",
+  courseCode2: "",
+  courseTitle2: "",
+  hasSecondSubject: false,
   roomA: "",
   roomB: "",
   reliever: "",
@@ -127,7 +130,14 @@ export default function Timetable() {
   const updateSetting = (field, value) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
     if (field === "semester") {
-      setTheoryRows((prev) => prev.map((row) => ({ ...row, courseCode: "", courseTitle: "" })));
+      setTheoryRows((prev) => prev.map((row) => ({
+        ...row,
+        courseCode: "",
+        courseTitle: "",
+        courseCode2: "",
+        courseTitle2: "",
+        hasSecondSubject: false,
+      })));
       setLabRows((prev) => prev.map((row) => ({ ...row, slots: {} })));
     }
   };
@@ -136,12 +146,28 @@ export default function Timetable() {
     setTheoryRows((prev) => prev.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
   };
 
-  const selectTheoryCourse = (id, code) => {
+  const selectTheoryCourse = (id, code, second = false) => {
     const course = courses.find((item) => item.code === code);
     setTheoryRows((prev) =>
       prev.map((row) =>
         row.id === id
-          ? { ...row, courseCode: course?.code || "", courseTitle: course?.title || "" }
+          ? second
+            ? { ...row, courseCode2: course?.code || "", courseTitle2: course?.title || "" }
+            : { ...row, courseCode: course?.code || "", courseTitle: course?.title || "" }
+          : row
+      )
+    );
+  };
+
+  const toggleSecondTheoryCourse = (id, enabled) => {
+    setTheoryRows((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              hasSecondSubject: enabled,
+              ...(!enabled ? { courseCode2: "", courseTitle2: "" } : {}),
+            }
           : row
       )
     );
@@ -370,7 +396,7 @@ export default function Timetable() {
   const downloadTheoryDutySheetPdf = async (source = currentTimetable()) => {
     const s = source.settings;
     const rows = (source.theoryRows || []).filter(
-      (row) => row.date || row.courseCode || row.courseTitle || row.roomA || row.roomB || row.reliever
+      (row) => row.date || row.courseCode || row.courseTitle || row.courseCode2 || row.courseTitle2 || row.roomA || row.roomB || row.reliever
     );
     const docSemLabel = s.semester.replace("Sem ", "Sem-");
     setDownloading("duty-sheet");
@@ -629,13 +655,53 @@ export default function Timetable() {
                         <td><input value={row.time} onChange={(e) => updateTheoryRow(row.id, "time", e.target.value)} /></td>
                         <td>
                           <select value={row.courseCode} onChange={(e) => selectTheoryCourse(row.id, e.target.value)}>
-      <option value="">-</option>
+                            <option value="">-</option>
                             {courses.map((course) => (
                               <option key={course.code} value={course.code}>{course.title}</option>
                             ))}
                           </select>
+                          {(row.hasSecondSubject || row.courseCode2) ? (
+                            <>
+                              <select
+                                value={row.courseCode2 || ""}
+                                onChange={(e) => selectTheoryCourse(row.id, e.target.value, true)}
+                                style={{ marginTop: 6 }}
+                              >
+                                <option value="">Second elective subject</option>
+                                {courses.map((course) => (
+                                  <option key={course.code} value={course.code}>{course.title}</option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                className="tt-inline-course-btn remove"
+                                onClick={() => toggleSecondTheoryCourse(row.id, false)}
+                              >
+                                Remove elective
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className="tt-inline-course-btn"
+                              onClick={() => toggleSecondTheoryCourse(row.id, true)}
+                            >
+                              + Add elective
+                            </button>
+                          )}
                         </td>
-                        <td><input className="tt-readonly" value={row.courseCode} readOnly placeholder="Auto" /></td>
+                        <td>
+                          <input className="tt-readonly" value={row.courseCode} readOnly placeholder="Auto" />
+                          {(row.hasSecondSubject || row.courseCode2) && (
+                            <input
+                              className="tt-readonly"
+                              value={row.courseCode2 || ""}
+                              readOnly
+                              placeholder="Second code"
+                              style={{ marginTop: 6 }}
+                            />
+                          )}
+                        </td>
                         <td><StaffSelect value={row.roomA} staff={teachingStaff} onChange={(v) => updateTheoryRow(row.id, "roomA", v)} /></td>
                         <td><StaffSelect value={row.roomB} staff={teachingStaff} onChange={(v) => updateTheoryRow(row.id, "roomB", v)} /></td>
                         <td><StaffSelect value={row.reliever} staff={teachingStaff} onChange={(v) => updateTheoryRow(row.id, "reliever", v)} /></td>
@@ -975,7 +1041,12 @@ function labSemesterLabel(sem) {
   return value ? `Sem-${romanToNumber[value] || value}` : String(sem || "").replace("Sem ", "Sem-");
 }
 function classLabel(sem) { return (sem === "Sem I" || sem === "Sem II") ? "FYMCA" : "SYMCA"; }
-function courseLine(row) { return [row.courseCode, row.courseTitle].filter(Boolean).join(" "); }
+function courseLine(row) {
+  return [
+    [row.courseCode, row.courseTitle].filter(Boolean).join(" "),
+    [row.courseCode2, row.courseTitle2].filter(Boolean).join(" "),
+  ].filter(Boolean).join("\n");
+}
 function displayDate(value) {
   if (!value) return "";
   const [y, m, d] = value.split("-");
@@ -1411,6 +1482,19 @@ const css = `
     box-shadow: 0 0 0 3px rgba(99,102,241,.1);
   }
   .tt-table .tt-readonly { background: #f8fafc; color: #64748b; cursor: default; }
+  .tt-inline-course-btn {
+    margin-top: 6px;
+    border: 0;
+    background: transparent;
+    color: #4338ca;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 2px 0;
+  }
+  .tt-inline-course-btn.remove { color: #b91c1c; }
+  .tt-inline-course-btn:hover { text-decoration: underline; }
   .tt-table textarea {
     min-height: 80px;
     resize: vertical;
