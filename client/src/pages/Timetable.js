@@ -493,11 +493,67 @@ export default function Timetable() {
     setTimeout(() => setDownloading(""), 600);
   };
 
+  const downloadLabDutySheetPdf = async (source = currentTimetable()) => {
+    const s = source.settings;
+    const rows = source.labRows || [];
+    const slots = source.labSlots || DEFAULT_LAB_SLOTS;
+    const docSemLabel = s.semester.replace("Sem ", "Sem-");
+    setDownloading("lab-duty-sheet");
+    const doc = makeDoc("l");
+    const width = doc.internal.pageSize.getWidth();
+
+    doc.setFont("times", "bold");
+    doc.setFontSize(14);
+    doc.text(`${timetableTitle(s).toUpperCase()} - LAB DUTY SHEET`, width / 2, 36, { align: "center" });
+
+    autoTable(doc, {
+      startY: 52,
+      margin: { left: 28, right: 28 },
+      theme: "grid",
+      head: [[
+        "Date",
+        "Subject",
+        "Teacher",
+        "No. of\nStudents",
+        "Lab Attendant\nSign",
+        "Lab Assistant\nSign",
+        "Peon\nSign",
+        "Clerk\nSign",
+      ]],
+      body: labDutySheetBody(rows, slots),
+      styles: {
+        ...tableStyles(9),
+        cellPadding: 5,
+        minCellHeight: 42,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        ...headStyles(),
+        fontSize: 9,
+        minCellHeight: 38,
+      },
+      columnStyles: {
+        0: { cellWidth: 82, halign: "center" },
+        1: { cellWidth: 210 },
+        2: { cellWidth: 115 },
+        3: { cellWidth: 72, halign: "center" },
+        4: { cellWidth: 82, halign: "center" },
+        5: { cellWidth: 82, halign: "center" },
+        6: { cellWidth: 70, halign: "center" },
+        7: { cellWidth: 70, halign: "center" },
+      },
+    });
+
+    doc.save(`MCA_${s.examType}_${docSemLabel}_Lab_Duty_Sheet.pdf`);
+    setTimeout(() => setDownloading(""), 600);
+  };
+
   const downloadSavedTimetable = async (item) => {
     await downloadTheoryPdf(item);
     await downloadSupervisionPdf(item);
     await downloadTheoryDutySheetPdf(item);
     await downloadLabPdf(item);
+    await downloadLabDutySheetPdf(item);
   };
 
   const title = timetableTitle(settings);
@@ -809,6 +865,12 @@ export default function Timetable() {
                                 onChange={(e) => updateLabSlotCell(row.id, slot.id, "rollNo", e.target.value)}
                                 placeholder="Roll No (1-10)"
                               />
+                              <StaffSelect
+                                value={normalizeLabSlotValue(row.slots?.[slot.id]).teacher}
+                                staff={teachingStaff}
+                                onChange={(value) => updateLabSlotCell(row.id, slot.id, "teacher", value)}
+                                placeholder="Select teacher"
+                              />
                             </div>
                           </td>
                         ))}
@@ -865,6 +927,7 @@ export default function Timetable() {
                       <button className="tt-mini-action" onClick={() => setPreviewTimetable(item)}>Preview</button>
                       <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}>Edit</button>
                       <button className="tt-mini-action" onClick={() => downloadTheoryDutySheetPdf(item)}>Duty Sheet</button>
+                      <button className="tt-mini-action" onClick={() => downloadLabDutySheetPdf(item)}>Lab Duty Sheet</button>
                       <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}>Download</button>
                       <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id || item._id)} title="Delete saved timetable">X</button>
                     </div>
@@ -947,6 +1010,14 @@ export default function Timetable() {
                 loading={downloading === "lab"}
                 onClick={() => downloadLabPdf()}
               />
+              <ExportCard
+                icon="LDS"
+                color="#7c3aed"
+                title="Lab Duty Sheet"
+                desc="Lab staff and signature register"
+                loading={downloading === "lab-duty-sheet"}
+                onClick={() => downloadLabDutySheetPdf()}
+              />
             </div>
           </div>
         </section>
@@ -964,10 +1035,10 @@ function Field({ label, icon, children }) {
   );
 }
 
-function StaffSelect({ value, staff, onChange }) {
+function StaffSelect({ value, staff, onChange, placeholder = "-" }) {
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="">-</option>
+      <option value="">{placeholder}</option>
       {staff.map((m) => (<option key={m._id} value={m.name}>{m.name}</option>))}
     </select>
   );
@@ -1118,6 +1189,28 @@ function theoryDutySheetColumnStyles() {
     return styles;
   }, {});
 }
+function labDutySheetBody(rows, slots) {
+  const body = rows.flatMap((row) =>
+    slots.flatMap((slot) => {
+      const value = normalizeLabSlotValue(row.slots?.[slot.id]);
+      if (!value.subject && !value.teacher) return [];
+      return [[
+        labDateLabel(row),
+        value.subject,
+        value.teacher,
+        "",
+        "",
+        "",
+        "",
+        "",
+      ]];
+    })
+  );
+
+  return body.length
+    ? body
+    : [["", "No lab examination entries available.", "", "", "", "", "", ""]];
+}
 function todayInput() { return new Date().toISOString().slice(0, 10); }
 function tableStyles(fs) { return { font: "times", fontSize: fs, textColor: [0,0,0], lineColor: [0,0,0], lineWidth: 0.35, cellPadding: 5, valign: "middle" }; }
 function headStyles() { return { fillColor: [255,255,255], textColor: [0,0,0], fontStyle: "bold", halign: "center" }; }
@@ -1133,11 +1226,12 @@ function labColumnStyles(slotCount) {
   }, {});
 }
 function normalizeLabSlotValue(value) {
-  if (!value) return { subject: "", rollNo: "" };
-  if (typeof value === "string") return { subject: value, rollNo: "" };
+  if (!value) return { subject: "", rollNo: "", teacher: "" };
+  if (typeof value === "string") return { subject: value, rollNo: "", teacher: "" };
   return {
     subject: value.subject || "",
     rollNo: value.rollNo || "",
+    teacher: value.teacher || "",
   };
 }
 function legacyLabSlotSubject(value) {
