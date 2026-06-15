@@ -549,7 +549,7 @@ function supportItemsForRow(row, exam) {
 
   if (calculatedDuty > 0 || row.dutyRole || row.dutyDates) {
     supportItems.push({
-      name: `${isConductionDuty(row) ? "Exam Conduction" : row.dutyRole || "Exam Duty"} - ${row.staffName || ""}`,
+      name: `${dutyLabelForRow(row)} - ${row.staffName || ""}`,
       rate: Number(row.dutyRate || 0),
       dates: row.dutyDates || row.examPeriod || exam.period,
       days: payableDutyDays(row),
@@ -558,7 +558,7 @@ function supportItemsForRow(row, exam) {
   }
   if (conduction > 0) {
     supportItems.push({
-      name: `Exam Conduction - ${row.staffName || ""}`,
+      name: `${conductionLabelForRow(row)} - ${row.staffName || ""}`,
       rate: conduction,
       dates: row.examPeriod || exam.period,
       days: 1,
@@ -678,6 +678,19 @@ function isTeaching(row) {
   return String(row.designation || "").toLowerCase() === "teaching";
 }
 
+function dutyLabelForRow(row) {
+  if (row.dutyRole && !isConductionDuty(row)) return row.dutyRole;
+  if (isHodRow(row)) return "HOD";
+  if (isCoordinatorRow(row)) return "Exam Coordinator";
+  return row.dutyRole || "Exam Duty";
+}
+
+function conductionLabelForRow(row) {
+  if (isHodRow(row)) return "HOD";
+  if (isCoordinatorRow(row)) return "Exam Coordinator";
+  return "Exam Conduction";
+}
+
 function amountInWords(amount) {
   const whole = Math.round(Number(amount || 0));
   if (whole === 0) return "Rupees Zero Only";
@@ -767,7 +780,11 @@ function staffCategoryRank(rows) {
 function isHodRow(row) {
   const role = String(row.dutyRole || "").toLowerCase().trim();
   const designation = staffDesignationValue(row);
-  return role === "hod" || role.includes("head of department") || /\bhod\b/.test(designation) || designation.includes("head of department");
+  return role === "hod" ||
+    role.includes("head of department") ||
+    /\bhod\b/.test(designation) ||
+    designation.includes("head of department") ||
+    sortName(row.staffName) === "archana pai";
 }
 
 function isCoordinatorRow(row) {
