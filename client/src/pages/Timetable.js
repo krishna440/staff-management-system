@@ -548,12 +548,68 @@ export default function Timetable() {
     setTimeout(() => setDownloading(""), 600);
   };
 
+  const downloadLabDutySheetV2Pdf = async (source = currentTimetable()) => {
+    const s = source.settings;
+    const rows = source.labRows || [];
+    const slots = source.labSlots || DEFAULT_LAB_SLOTS;
+    const docSemLabel = s.semester.replace("Sem ", "Sem-");
+    setDownloading("lab-duty-sheet-v2");
+    const doc = makeDoc("l");
+    const width = doc.internal.pageSize.getWidth();
+
+    doc.setFont("times", "bold");
+    doc.setFontSize(14);
+    doc.text(`${timetableTitle(s).toUpperCase()} - LAB DUTY SHEET V2`, width / 2, 36, { align: "center" });
+
+    autoTable(doc, {
+      startY: 52,
+      margin: { left: 28, right: 28 },
+      theme: "grid",
+      head: [[
+        "Date",
+        "Subject",
+        "Teacher",
+        "No. of\nStudents",
+        "Lab Attendant\nSign",
+        "Lab Assistant\nSign",
+        "Peon\nSign",
+        "Clerk\nSign",
+      ]],
+      body: labDutySheetV2Body(rows, slots),
+      styles: {
+        ...tableStyles(9),
+        cellPadding: 5,
+        minCellHeight: 42,
+        overflow: "linebreak",
+      },
+      headStyles: {
+        ...headStyles(),
+        fontSize: 9,
+        minCellHeight: 38,
+      },
+      columnStyles: {
+        0: { cellWidth: 76, halign: "center" },
+        1: { cellWidth: 230 },
+        2: { cellWidth: 120 },
+        3: { cellWidth: 72, halign: "center" },
+        4: { cellWidth: 78, halign: "center" },
+        5: { cellWidth: 78, halign: "center" },
+        6: { cellWidth: 64, halign: "center" },
+        7: { cellWidth: 64, halign: "center" },
+      },
+    });
+
+    doc.save(`MCA_${s.examType}_${docSemLabel}_Lab_Duty_Sheet_V2.pdf`);
+    setTimeout(() => setDownloading(""), 600);
+  };
+
   const downloadSavedTimetable = async (item) => {
     await downloadTheoryPdf(item);
     await downloadSupervisionPdf(item);
     await downloadTheoryDutySheetPdf(item);
     await downloadLabPdf(item);
     await downloadLabDutySheetPdf(item);
+    await downloadLabDutySheetV2Pdf(item);
   };
 
   const title = timetableTitle(settings);
@@ -928,6 +984,7 @@ export default function Timetable() {
                       <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}>Edit</button>
                       <button className="tt-mini-action" onClick={() => downloadTheoryDutySheetPdf(item)}>Duty Sheet</button>
                       <button className="tt-mini-action" onClick={() => downloadLabDutySheetPdf(item)}>Lab Duty Sheet</button>
+                      <button className="tt-mini-action" onClick={() => downloadLabDutySheetV2Pdf(item)}>Lab Duty V2</button>
                       <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}>Download</button>
                       <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id || item._id)} title="Delete saved timetable">X</button>
                     </div>
@@ -1017,6 +1074,14 @@ export default function Timetable() {
                 desc="Lab staff and signature register"
                 loading={downloading === "lab-duty-sheet"}
                 onClick={() => downloadLabDutySheetPdf()}
+              />
+              <ExportCard
+                icon="V2"
+                color="#9333ea"
+                title="Lab Duty Sheet V2"
+                desc="Unique lab subjects per date"
+                loading={downloading === "lab-duty-sheet-v2"}
+                onClick={() => downloadLabDutySheetV2Pdf()}
               />
             </div>
           </div>
@@ -1201,6 +1266,52 @@ function labDutySheetBody(rows, slots) {
         teacher: value.teacher,
       }];
     });
+
+    entries.forEach((entry, index) => {
+      body.push([
+        index === 0
+          ? { content: labDateLabel(row), rowSpan: entries.length, styles: { halign: "center", valign: "middle", fontStyle: "bold" } }
+          : null,
+        entry.subject,
+        entry.teacher,
+        "",
+        "",
+        "",
+        "",
+        "",
+      ].filter((cell) => cell !== null));
+    });
+  });
+
+  return body.length
+    ? body
+    : [[
+        { content: "", styles: { halign: "center" } },
+        { content: "No lab examination entries available.", colSpan: 7, styles: { halign: "center", textColor: [100, 116, 139] } },
+      ]];
+}
+function labDutySheetV2Body(rows, slots) {
+  const body = [];
+
+  rows.forEach((row) => {
+    const subjectsByName = new Map();
+    slots.forEach((slot) => {
+      const value = normalizeLabSlotValue(row.slots?.[slot.id]);
+      if (!value.subject) return;
+      const subjectKey = value.subject.trim().toLowerCase();
+      if (!subjectsByName.has(subjectKey)) {
+        subjectsByName.set(subjectKey, {
+          subject: value.subject,
+          teachers: new Set(),
+        });
+      }
+      if (value.teacher) subjectsByName.get(subjectKey).teachers.add(value.teacher);
+    });
+
+    const entries = Array.from(subjectsByName.values()).map((entry) => ({
+      subject: entry.subject,
+      teacher: Array.from(entry.teachers).join(", "),
+    }));
 
     entries.forEach((entry, index) => {
       body.push([
