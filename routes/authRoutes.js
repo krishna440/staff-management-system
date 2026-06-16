@@ -12,6 +12,7 @@ const ALLOWED_USERS = [
   { email: "bzolage@mc.vjti.ac.in", name: "Dr. Bhakti Zolage", role: "Guide"},  
   { email: "bppawar_mc24@mc.vjti.ac.in", name: "Admin", role: "admin" },
   { email: "test@gmail.com", name: "Test Admin", role: "admin", password: "admin111", mustChangePassword: false },
+  { email: "pawarbhupendra189@gmail.com", name: "Admin", role: "admin" }
 ];
 
 function normalizeEmail(email) {
