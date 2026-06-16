@@ -536,6 +536,7 @@ const Chargesheet = () => {
     [dutyRoleOptions, form.dutyRole]
   );
   const isRelieverDuty = selectedDutyRole?.key === "reliever";
+  const isLabDutyRole = ["lab_attendant", "lab_assistant"].includes(selectedDutyRole?.key);
 
   const examOptionsForYear = useMemo(
     () => EXAM_OPTIONS.map((option) => examOptionForYear(option, examYear)),
@@ -559,6 +560,16 @@ const Chargesheet = () => {
     () => examDateBounds(form.examPeriod || selectedExam.period, form.examMonth || selectedExam.month),
     [form.examPeriod, form.examMonth, selectedExam.period, selectedExam.month]
   );
+  const labDutyDateBounds = useMemo(
+    () => {
+      const start = dateFromDateKey(form.labExamStartDate);
+      const end = dateFromDateKey(form.labExamEndDate);
+      if (start && end) return { start, end };
+      return examDateBounds(form.labExamPeriod, form.examMonth || selectedExam.month);
+    },
+    [form.labExamStartDate, form.labExamEndDate, form.labExamPeriod, form.examMonth, selectedExam.month]
+  );
+  const activeDutyDateBounds = isLabDutyRole ? labDutyDateBounds : dutyDateBounds;
 
   const selectedCourses = useMemo(
     () => subjectCatalog[selectedExam.semester] || [],
@@ -579,11 +590,11 @@ const Chargesheet = () => {
   }, []);
 
   useEffect(() => {
-    if (!dutyDateBounds?.start || !dutyDateBounds?.end) return;
-    const minKey = dateKeyFromDate(dutyDateBounds.start);
-    const maxKey = dateKeyFromDate(dutyDateBounds.end);
+    if (!activeDutyDateBounds?.start || !activeDutyDateBounds?.end) return;
+    const minKey = dateKeyFromDate(activeDutyDateBounds.start);
+    const maxKey = dateKeyFromDate(activeDutyDateBounds.end);
     setDutyDateKeys((prev) => prev.filter((key) => key >= minKey && key <= maxKey));
-  }, [dutyDateBounds]);
+  }, [activeDutyDateBounds]);
 
   useEffect(() => {
     setRelieverRoomsByDate((prev) => {
@@ -1038,6 +1049,13 @@ const Chargesheet = () => {
           -webkit-appearance: none;
         }
         .cs-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
+        .cs-year-select {
+          max-width: 220px;
+          font-weight: 700;
+          background-color: #f8fafc;
+          border-color: #dbe3ef;
+          box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+        }
         .cs-select:focus, .cs-input:focus {
           border-color: #6366f1;
           box-shadow: 0 0 0 3px rgba(99,102,241,.12);
@@ -1618,8 +1636,8 @@ const Chargesheet = () => {
               <div className="cs-section-divider"><span>Choose exam</span></div>
               <div className="cs-grid2" style={{ marginBottom: 16 }}>
                 <label className="cs-field">
-                  <span>Exam Year</span>
-                  <select name="examYear" value={examYear} onChange={handleExamYearChange}>
+                  <span className="cs-label">Exam Year</span>
+                  <select className="cs-select cs-year-select" name="examYear" value={examYear} onChange={handleExamYearChange}>
                     {EXAM_YEAR_OPTIONS.map((year) => (
                       <option key={year} value={year}>{year}</option>
                     ))}
@@ -1902,9 +1920,14 @@ const Chargesheet = () => {
                   <DutyExamCalendar
                     value={dutyDateKeys}
                     onChange={setDutyDateKeys}
-                    accent={selectedExam.color}
-                    bounds={dutyDateBounds}
+                    accent={isLabDutyRole ? "#10b981" : selectedExam.color}
+                    bounds={activeDutyDateBounds}
                   />
+                  {isLabDutyRole && (
+                    <p className="cs-duty-cal-hint" style={{ marginTop: 6 }}>
+                      Lab Attendant and Lab Assistant duties use the lab/practical exam period.
+                    </p>
+                  )}
                   <div className="cs-duty-dates-readout">
                     {dutyDatesJoined.trim() ? dutyDatesJoined : "No dates selected yet."}
                   </div>
