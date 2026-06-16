@@ -93,6 +93,7 @@ const STYLE = {
 const TEACHING_WIDTHS = [7, 24, 42, 18, 14, 18, 14, 18];
 const SUPPORT_WIDTHS = [7, 27, 20, 34, 16, 20, 16];
 const TOTAL_WIDTHS = [8, 32, 22, 22, 18, 18, 22];
+const TEACHING_MANUAL_ENTRY_ROWS = 12;
 
 export function getExamWorkbookGroupOptions(chargesheets = []) {
   return buildExamGroups(chargesheets).map(({ key, exam, rows }) => ({
@@ -310,6 +311,7 @@ function buildTeachingSheet(exam, allRows) {
     merges.push(`A${rows.length}:H${rows.length}`);
   }
 
+  addManualTeachingRows(rows, sr, exam);
   addSignatureRows(rows, 8);
 
   return {
@@ -687,10 +689,37 @@ function teachingAmount(row) {
   );
 }
 
+function addManualTeachingRows(rows, startSr, exam) {
+  const rates = loadTaskRates();
+  for (let index = 0; index < TEACHING_MANUAL_ENTRY_ROWS; index += 1) {
+    const rowNumber = rows.length + 1;
+    rows.push({
+      cells: [
+        { value: startSr + index, style: STYLE.center },
+        { value: "", style: STYLE.text },
+        { value: "", style: STYLE.text },
+        { value: "", style: STYLE.center },
+        { formula: `IF(D${rowNumber}="","",D${rowNumber}*${rates.paperSettingPerSet})`, value: "", style: STYLE.amount },
+        { value: "", style: STYLE.center },
+        { formula: `IF(F${rowNumber}="","",${manualAssessmentFormula(exam.examType, rowNumber, rates.assessmentPerPaper)})`, value: "", style: STYLE.amount },
+        { formula: `IF(COUNTA(B${rowNumber}:G${rowNumber})=0,"",SUM(E${rowNumber},G${rowNumber}))`, value: "", style: STYLE.total },
+      ],
+      height: 30,
+    });
+  }
+}
+
 function assessmentFormulaForRow(row, rowNumber) {
   const rate = assessmentRateForRow(row);
   if (row.examType === "Re-ESE") {
     return `IF(F${rowNumber}>0,MAX(F${rowNumber}*${rate},200),0)`;
+  }
+  return `F${rowNumber}*${rate}`;
+}
+
+function manualAssessmentFormula(examType, rowNumber, rate) {
+  if (examType === "Re-ESE") {
+    return `MAX(F${rowNumber}*${rate},200)`;
   }
   return `F${rowNumber}*${rate}`;
 }
