@@ -524,7 +524,7 @@ export default function Timetable() {
       styles: {
         ...tableStyles(9),
         cellPadding: 5,
-        minCellHeight: 42,
+        minCellHeight: 38,
         overflow: "linebreak",
       },
       headStyles: {
@@ -533,14 +533,14 @@ export default function Timetable() {
         minCellHeight: 38,
       },
       columnStyles: {
-        0: { cellWidth: 82, halign: "center" },
-        1: { cellWidth: 210 },
-        2: { cellWidth: 115 },
+        0: { cellWidth: 76, halign: "center" },
+        1: { cellWidth: 230 },
+        2: { cellWidth: 120 },
         3: { cellWidth: 72, halign: "center" },
-        4: { cellWidth: 82, halign: "center" },
-        5: { cellWidth: 82, halign: "center" },
-        6: { cellWidth: 70, halign: "center" },
-        7: { cellWidth: 70, halign: "center" },
+        4: { cellWidth: 78, halign: "center" },
+        5: { cellWidth: 78, halign: "center" },
+        6: { cellWidth: 64, halign: "center" },
+        7: { cellWidth: 64, halign: "center" },
       },
     });
 
@@ -1190,26 +1190,40 @@ function theoryDutySheetColumnStyles() {
   }, {});
 }
 function labDutySheetBody(rows, slots) {
-  const body = rows.flatMap((row) =>
-    slots.flatMap((slot) => {
+  const body = [];
+
+  rows.forEach((row) => {
+    const entries = slots.flatMap((slot) => {
       const value = normalizeLabSlotValue(row.slots?.[slot.id]);
       if (!value.subject && !value.teacher) return [];
-      return [[
-        labDateLabel(row),
-        value.subject,
-        value.teacher,
+      return [{
+        subject: value.subject,
+        teacher: value.teacher,
+      }];
+    });
+
+    entries.forEach((entry, index) => {
+      body.push([
+        index === 0
+          ? { content: labDateLabel(row), rowSpan: entries.length, styles: { halign: "center", valign: "middle", fontStyle: "bold" } }
+          : null,
+        entry.subject,
+        entry.teacher,
         "",
         "",
         "",
         "",
         "",
-      ]];
-    })
-  );
+      ].filter((cell) => cell !== null));
+    });
+  });
 
   return body.length
     ? body
-    : [["", "No lab examination entries available.", "", "", "", "", "", ""]];
+    : [[
+        { content: "", styles: { halign: "center" } },
+        { content: "No lab examination entries available.", colSpan: 7, styles: { halign: "center", textColor: [100, 116, 139] } },
+      ]];
 }
 function todayInput() { return new Date().toISOString().slice(0, 10); }
 function tableStyles(fs) { return { font: "times", fontSize: fs, textColor: [0,0,0], lineColor: [0,0,0], lineWidth: 0.35, cellPadding: 5, valign: "middle" }; }
