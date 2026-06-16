@@ -1197,7 +1197,7 @@ function labDutySheetBody(rows, slots) {
       const value = normalizeLabSlotValue(row.slots?.[slot.id]);
       if (!value.subject && !value.teacher) return [];
       return [{
-        subject: value.subject,
+        subject: labDutySubjectText(value, slot),
         teacher: value.teacher,
       }];
     });
@@ -1224,6 +1224,13 @@ function labDutySheetBody(rows, slots) {
         { content: "", styles: { halign: "center" } },
         { content: "No lab examination entries available.", colSpan: 7, styles: { halign: "center", textColor: [100, 116, 139] } },
       ]];
+}
+function labDutySubjectText(value, slot) {
+  return [
+    value.subject,
+    slot?.label ? `Slot: ${slot.label}` : "",
+    value.rollNo,
+  ].filter(Boolean).join("\n");
 }
 function todayInput() { return new Date().toISOString().slice(0, 10); }
 function tableStyles(fs) { return { font: "times", fontSize: fs, textColor: [0,0,0], lineColor: [0,0,0], lineWidth: 0.35, cellPadding: 5, valign: "middle" }; }
