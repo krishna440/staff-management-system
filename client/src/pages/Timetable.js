@@ -81,7 +81,7 @@ export default function Timetable() {
   );
 
   const labCourses = useMemo(
-    () => courses.filter((course) => course.kind === "lab"),
+    () => courses.filter((course) => course.kind === "lab" || course.includeInLab),
     [courses]
   );
 

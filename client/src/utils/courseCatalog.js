@@ -15,7 +15,7 @@ export const COURSE_CATALOG = {
     { code: "R5MC5021T", title: "Data Mining" },
     { code: "R5MC5022T", title: "Design and Analysis of Algorithm" },
     { code: "R5MC5023S", title: "Mathematical and Statistical Foundation II" },
-    { code: "R5MC5027T", title: "Professional Communication" },
+    { code: "R5MC5027T", title: "Professional Communication", includeInLab: true },
     { code: "R5MC5111S", title: "Computer Graphics & Animation" },
     { code: "R5MC5112S", title: "Digital Forensics" },
     { code: "R5MC5113S", title: "Cloud Computing" },
