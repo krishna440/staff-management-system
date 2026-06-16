@@ -1292,9 +1292,13 @@ function labDutySheetBody(rows, slots) {
 }
 function labDutySheetV2Body(rows, slots) {
   const body = [];
+  const groupsByDate = new Map();
 
   rows.forEach((row) => {
-    const subjectsByName = new Map();
+    const dateLabel = labDateLabel(row);
+    if (!groupsByDate.has(dateLabel)) groupsByDate.set(dateLabel, new Map());
+    const subjectsByName = groupsByDate.get(dateLabel);
+
     slots.forEach((slot) => {
       const value = normalizeLabSlotValue(row.slots?.[slot.id]);
       if (!value.subject) return;
@@ -1307,7 +1311,9 @@ function labDutySheetV2Body(rows, slots) {
       }
       if (value.teacher) subjectsByName.get(subjectKey).teachers.add(value.teacher);
     });
+  });
 
+  groupsByDate.forEach((subjectsByName, dateLabel) => {
     const entries = Array.from(subjectsByName.values()).map((entry) => ({
       subject: entry.subject,
       teacher: Array.from(entry.teachers).join(", "),
@@ -1316,7 +1322,7 @@ function labDutySheetV2Body(rows, slots) {
     entries.forEach((entry, index) => {
       body.push([
         index === 0
-          ? { content: labDateLabel(row), rowSpan: entries.length, styles: { halign: "center", valign: "middle", fontStyle: "bold" } }
+          ? { content: dateLabel, rowSpan: entries.length, styles: { halign: "center", valign: "middle", fontStyle: "bold" } }
           : null,
         entry.subject,
         entry.teacher,
