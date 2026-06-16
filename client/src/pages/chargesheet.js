@@ -327,12 +327,26 @@ function mondayWeekdayIndex(dayOfWeekSundayZero) {
   return (dayOfWeekSundayZero + 6) % 7;
 }
 
-function DutyExamCalendar({ value, onChange, accent, bounds }) {
+function DutyExamCalendar({ value, onChange, accent, bounds, allowedRanges }) {
   const selected = useMemo(() => new Set(value), [value]);
-  const minKey = bounds?.start ? dateKeyFromDate(bounds.start) : "";
-  const maxKey = bounds?.end ? dateKeyFromDate(bounds.end) : "";
-  const startYear = bounds?.start?.getFullYear();
-  const startMonth = bounds?.start?.getMonth();
+  const dateRanges = useMemo(() => {
+    const ranges = Array.isArray(allowedRanges) && allowedRanges.length
+      ? allowedRanges
+      : bounds?.start && bounds?.end
+        ? [bounds]
+        : [];
+    return ranges
+      .filter((range) => range?.start && range?.end)
+      .map((range) => ({
+        start: dateKeyFromDate(range.start),
+        end: dateKeyFromDate(range.end),
+      }))
+      .filter((range) => range.start && range.end)
+      .sort((a, b) => a.start.localeCompare(b.start));
+  }, [allowedRanges, bounds]);
+  const firstRangeStart = dateRanges[0]?.start ? dateFromDateKey(dateRanges[0].start) : null;
+  const startYear = firstRangeStart?.getFullYear();
+  const startMonth = firstRangeStart?.getMonth();
 
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
@@ -359,7 +373,7 @@ function DutyExamCalendar({ value, onChange, accent, bounds }) {
 
   const toggle = (day) => {
     const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    if ((minKey && key < minKey) || (maxKey && key > maxKey)) return;
+    if (!isDateKeyAllowedInRanges(key, dateRanges)) return;
     const next = new Set(value);
     if (next.has(key)) next.delete(key);
     else next.add(key);
@@ -396,7 +410,7 @@ function DutyExamCalendar({ value, onChange, accent, bounds }) {
         {dayCells.map((day) => {
           const key = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const active = selected.has(key);
-          const blocked = (minKey && key < minKey) || (maxKey && key > maxKey);
+          const blocked = !isDateKeyAllowedInRanges(key, dateRanges);
           return (
             <button
               key={key}
@@ -412,11 +426,18 @@ function DutyExamCalendar({ value, onChange, accent, bounds }) {
         })}
       </div>
       <p className="cs-duty-cal-hint">
-        Select dates within the exam period
-        {bounds?.start && bounds?.end ? ` (${formatDdMmYyyyFromKey(minKey)} to ${formatDdMmYyyyFromKey(maxKey)}).` : "."}
+        Select dates within the lab or theory exam period
+        {dateRanges.length
+          ? ` (${dateRanges.map((range) => `${formatDdMmYyyyFromKey(range.start)} to ${formatDdMmYyyyFromKey(range.end)}`).join(" / ")}).`
+          : "."}
       </p>
     </div>
   );
+}
+
+function isDateKeyAllowedInRanges(key, ranges) {
+  if (!ranges.length) return true;
+  return ranges.some((range) => key >= range.start && key <= range.end);
 }
 
 function ExamPeriodRangeCalendar({ value, onChange, accent, fallbackMonth }) {
@@ -536,7 +557,6 @@ const Chargesheet = () => {
     [dutyRoleOptions, form.dutyRole]
   );
   const isRelieverDuty = selectedDutyRole?.key === "reliever";
-  const isLabDutyRole = ["lab_attendant", "lab_assistant"].includes(selectedDutyRole?.key);
 
   const examOptionsForYear = useMemo(
     () => EXAM_OPTIONS.map((option) => examOptionForYear(option, examYear)),
@@ -569,7 +589,12 @@ const Chargesheet = () => {
     },
     [form.labExamStartDate, form.labExamEndDate, form.labExamPeriod, form.examMonth, selectedExam.month]
   );
-  const activeDutyDateBounds = isLabDutyRole ? labDutyDateBounds : dutyDateBounds;
+  const allowedDutyDateRanges = useMemo(
+    () => [labDutyDateBounds, dutyDateBounds]
+      .filter((range) => range?.start && range?.end)
+      .sort((a, b) => a.start.getTime() - b.start.getTime()),
+    [labDutyDateBounds, dutyDateBounds]
+  );
 
   const selectedCourses = useMemo(
     () => subjectCatalog[selectedExam.semester] || [],
@@ -590,11 +615,13 @@ const Chargesheet = () => {
   }, []);
 
   useEffect(() => {
-    if (!activeDutyDateBounds?.start || !activeDutyDateBounds?.end) return;
-    const minKey = dateKeyFromDate(activeDutyDateBounds.start);
-    const maxKey = dateKeyFromDate(activeDutyDateBounds.end);
-    setDutyDateKeys((prev) => prev.filter((key) => key >= minKey && key <= maxKey));
-  }, [activeDutyDateBounds]);
+    if (!allowedDutyDateRanges.length) return;
+    const rangeKeys = allowedDutyDateRanges.map((range) => ({
+      start: dateKeyFromDate(range.start),
+      end: dateKeyFromDate(range.end),
+    }));
+    setDutyDateKeys((prev) => prev.filter((key) => isDateKeyAllowedInRanges(key, rangeKeys)));
+  }, [allowedDutyDateRanges]);
 
   useEffect(() => {
     setRelieverRoomsByDate((prev) => {
@@ -1920,14 +1947,12 @@ const Chargesheet = () => {
                   <DutyExamCalendar
                     value={dutyDateKeys}
                     onChange={setDutyDateKeys}
-                    accent={isLabDutyRole ? "#10b981" : selectedExam.color}
-                    bounds={activeDutyDateBounds}
+                    accent={selectedExam.color}
+                    allowedRanges={allowedDutyDateRanges}
                   />
-                  {isLabDutyRole && (
-                    <p className="cs-duty-cal-hint" style={{ marginTop: 6 }}>
-                      Lab Attendant and Lab Assistant duties use the lab/practical exam period.
-                    </p>
-                  )}
+                  <p className="cs-duty-cal-hint" style={{ marginTop: 6 }}>
+                    Lab and theory exam dates are selectable for all roles. Other dates remain blocked.
+                  </p>
                   <div className="cs-duty-dates-readout">
                     {dutyDatesJoined.trim() ? dutyDatesJoined : "No dates selected yet."}
                   </div>
