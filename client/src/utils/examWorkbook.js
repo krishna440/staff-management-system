@@ -93,7 +93,7 @@ const STYLE = {
 const TEACHING_WIDTHS = [7, 24, 42, 18, 14, 18, 14, 18];
 const SUPPORT_WIDTHS = [7, 27, 20, 34, 16, 20, 16];
 const TOTAL_WIDTHS = [8, 32, 22, 22, 18, 18, 22];
-const TEACHING_MANUAL_ENTRY_ROWS = 12;
+const TEACHING_MANUAL_ENTRY_ROWS = 2;
 
 export function getExamWorkbookGroupOptions(chargesheets = []) {
   return buildExamGroups(chargesheets).map(({ key, exam, rows }) => ({
@@ -702,7 +702,7 @@ function addManualTeachingRows(rows, startSr, exam) {
         { formula: `IF(D${rowNumber}="","",D${rowNumber}*${rates.paperSettingPerSet})`, value: "", style: STYLE.amount },
         { value: "", style: STYLE.center },
         { formula: `IF(F${rowNumber}="","",${manualAssessmentFormula(exam.examType, rowNumber, rates.assessmentPerPaper)})`, value: "", style: STYLE.amount },
-        { formula: `IF(COUNTA(B${rowNumber}:G${rowNumber})=0,"",SUM(E${rowNumber},G${rowNumber}))`, value: "", style: STYLE.total },
+        { formula: `IF(AND(D${rowNumber}="",F${rowNumber}=""),"",SUM(E${rowNumber},G${rowNumber}))`, value: "", style: STYLE.total },
       ],
       height: 30,
     });
