@@ -7,9 +7,9 @@ const router = express.Router();
 const DEFAULT_PASSWORD = "123";
 const OTP_TTL_MINUTES = 10;
 const ALLOWED_USERS = [
-  { email: "pawarbhupendra189@gmail.com", name: "Prof. Archana Pai", role: "hod" },
-  { email: "krishnarajput97121@gmail.com", name: "Prof. Sonali Ajankar", role: "exam_committee" },
-  { email: "bzolage@mc.vjti.ac.in", name: "Dr. Bhakti Zolage", role: "Guide"},  
+  { email: "apai@mc.vjti.ac.in", name: "Prof. Archana Pai", role: "hod" },
+  { email: "sajankar@mc.vjti.ac.in", name: "Prof. Sonali Ajankar", role: "exam_co-ordinator" },
+  { email: "bzolage@mc.vjti.ac.in", name: "Dr. Bhakti Zolage", role: "Exam_committee_member"},  
   { email: "bppawar_mc24@mc.vjti.ac.in", name: "Admin", role: "admin" },
 ];
 
