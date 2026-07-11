@@ -820,7 +820,6 @@ export default function Timetable() {
                           {slot.label}
                         </th>
                       ))}
-                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -840,6 +839,19 @@ export default function Timetable() {
                               onChange={(e) => updateLabRow(row.id, "dayDate", e.target.value)}
                               placeholder="Or type custom day/date"
                             />
+                            <div className="tt-lab-row-actions">
+                              <button
+                                className="tt-mini-action"
+                                onClick={() => addLabRowBelow(row.id)}
+                                title="Add another batch row for this date"
+                              >Add below</button>
+                              <button
+                                className="tt-icon-btn"
+                                onClick={() => removeLabRow(row.id)}
+                                disabled={labRows.length === 1}
+                                title="Remove row"
+                              >X</button>
+                            </div>
                           </div>
                         </td>
                         {labSlots.map((slot) => (
@@ -866,18 +878,6 @@ export default function Timetable() {
                             </div>
                           </td>
                         ))}
-                        <td>
-                          <button
-                            className="tt-mini-action"
-                            onClick={() => addLabRowBelow(row.id)}
-                            title="Add another batch row for this date"
-                          >Add below</button>
-                          <button
-                            className="tt-icon-btn"
-                            onClick={() => removeLabRow(row.id)}
-                            disabled={labRows.length === 1}
-                          >X</button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1628,6 +1628,14 @@ const css = `
   }
   .tt-lab-date-cell textarea {
     min-height: 54px;
+  }
+  .tt-lab-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tt-lab-row-actions .tt-mini-action {
+    margin-bottom: 0;
   }
   .tt-lab-slot-cell {
     display: grid;
