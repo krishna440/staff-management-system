@@ -21,7 +21,6 @@ const NAV_GROUPS = [
       { label: "Add Staff", path: "/add-staff" },
       { label: "Task Rates", path: "/task-rates" },
       { label: "Create Timetable", path: "/timetable" },
-      { label: "Accounts Section", path: "/accounts" },
     ],
   },
 ];

@@ -449,7 +449,6 @@ const Dashboard = () => {
         { label: "Add Staff",          path: "/add-staff",   dot: true },
         { label: "Task Rates",         path: "/task-rates",  dot: true },
         { label: "Create Timetable",   path: "/timetable",   dot: true },
-        { label: "Accounts Section",   path: "/accounts",    dot: true },
       ],
     },
   ];
@@ -1148,14 +1147,6 @@ const Dashboard = () => {
               {sidebarCollapsed ? ">" : "<"}
             </button>
           </div>
-
-          {/* Role access banner — only for ACCOUNTS */}
-          {false && (
-            <div className="role-access-banner">
-              <div className="dot" />
-              <span>View-only access — Accounts Section</span>
-            </div>
-          )}
 
           <div className="nav-section">
             {NAV_GROUPS.map((group) => {

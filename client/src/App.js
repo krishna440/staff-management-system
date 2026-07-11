@@ -7,7 +7,6 @@ import Chargesheet from "./pages/chargesheet";
 import Timetable from "./pages/Timetable";
 import Teaching from "./pages/Teaching";
 import NonTeaching from "./pages/NonTeaching";
-import Accounts from "./pages/Accounts";
 import TaskRates from "./pages/TaskRates";
 import ChangePassword from "./pages/ChangePassword";
 import AddSubject from "./pages/AddSubject";
@@ -96,14 +95,6 @@ function App() {
             </PasswordReadyRoute>
           }
         />
-<Route
-  path="/accounts"
-  element={
-    <PasswordReadyRoute>
-      <PortalShell><Accounts /></PortalShell>
-    </PasswordReadyRoute>
-  }
-/>
         <Route
           path="/task-rates"
           element={
