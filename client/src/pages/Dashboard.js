@@ -447,7 +447,7 @@ const Dashboard = () => {
         { label: "Create Chargesheet", path: "/chargesheet", dot: true },
         { label: "Add Subject",        path: "/add-subject", dot: true },
         { label: "Add Staff",          path: "/add-staff",   dot: true },
-        { label: "Task Rates",         path: "/task-rates",  dot: true },
+        { label: "Task Charges",         path: "/task-rates",  dot: true },
         { label: "Create Timetable",   path: "/timetable",   dot: true },
       ],
     },
