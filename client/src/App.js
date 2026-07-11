@@ -24,8 +24,6 @@ const getStoredUser = () => {
   }
 };
 
-const getUserRole = () => (getStoredUser()?.user?.role || "").toUpperCase();
-
 const PrivateRoute = ({ children }) => {
   return getStoredUser() ? children : <Navigate to="/login" replace />;
 };
@@ -35,14 +33,6 @@ const PasswordReadyRoute = ({ children }) => {
   if (!storedUser) return <Navigate to="/login" replace />;
   return storedUser.user?.mustChangePassword ? <Navigate to="/change-password" replace /> : children;
 };
-
-const RoleRoute = ({ roles, children }) => {
-  const storedUser = getStoredUser();
-  if (!storedUser) return <Navigate to="/login" replace />;
-  if (storedUser.user?.mustChangePassword) return <Navigate to="/change-password" replace />;
-  return roles.includes(getUserRole()) ? children : <Navigate to="/" replace />;
-};
-
 
 function App() {
   return (
@@ -109,25 +99,25 @@ function App() {
 <Route
   path="/accounts"
   element={
-    <RoleRoute roles={["ACCOUNTS"]}>
+    <PasswordReadyRoute>
       <PortalShell><Accounts /></PortalShell>
-    </RoleRoute>
+    </PasswordReadyRoute>
   }
 />
         <Route
           path="/task-rates"
           element={
-            <RoleRoute roles={["ADMIN", "HOD"]}>
+            <PasswordReadyRoute>
               <PortalShell><TaskRates /></PortalShell>
-            </RoleRoute>
+            </PasswordReadyRoute>
           }
         />
         <Route
           path="/add-subject"
           element={
-            <RoleRoute roles={["ADMIN", "HOD"]}>
+            <PasswordReadyRoute>
               <PortalShell><AddSubject /></PortalShell>
-            </RoleRoute>
+            </PasswordReadyRoute>
           }
         />
         <Route path="*" element={<Navigate to={getStoredUser() ? "/" : "/login"} replace />} />

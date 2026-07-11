@@ -244,7 +244,7 @@ const Dashboard = () => {
 
   const userRole =
     (user?.user?.role || user?.user?.type || "").toUpperCase() || "USER";
-  const canManageEntries = userRole === "ADMIN" || userRole === "HOD";
+  const canManageEntries = Boolean(user?.user);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("portal_sidebar_collapsed") === "1"
   );
@@ -429,7 +429,6 @@ const Dashboard = () => {
         {
           label: "Dashboard",
           path: "/",
-          roles: ["ADMIN", "HOD", "ACCOUNTS"],
           dot: false,
         },
       ],
@@ -437,31 +436,28 @@ const Dashboard = () => {
     {
       label: "Staff",
       // Accounts does NOT see staff directory
-      roles: ["ADMIN", "HOD"],
       items: [
-        { label: "Teaching",     path: "/teaching",     roles: ["ADMIN", "HOD"] },
-        { label: "Non-Teaching", path: "/non-teaching", roles: ["ADMIN", "HOD"] },
+        { label: "Teaching",     path: "/teaching" },
+        { label: "Non-Teaching", path: "/non-teaching" },
       ],
     },
     {
       label: "Chargesheet",
       items: [
-        { label: "Create Chargesheet", path: "/chargesheet", roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Add Subject",        path: "/add-subject", roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Add Staff",          path: "/add-staff",   roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Task Rates",         path: "/task-rates",   roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Create Timetable",   path: "/timetable",   roles: ["ADMIN", "HOD"], dot: true },
-        { label: "Accounts Section",   path: "/accounts",    roles: ["ACCOUNTS"],     dot: true },
+        { label: "Create Chargesheet", path: "/chargesheet", dot: true },
+        { label: "Add Subject",        path: "/add-subject", dot: true },
+        { label: "Add Staff",          path: "/add-staff",   dot: true },
+        { label: "Task Rates",         path: "/task-rates",  dot: true },
+        { label: "Create Timetable",   path: "/timetable",   dot: true },
+        { label: "Accounts Section",   path: "/accounts",    dot: true },
       ],
     },
   ];
 
-  const isVisible = (roles) => {
-    if (!roles || roles.length === 0) return true;
-    return roles.includes(userRole);
-  };
+  const isVisible = () => true;
 
   // ─── PDF GENERATOR ────────────────────────────────────────────────────────
+  // eslint-disable-next-line no-unused-vars
   const generateChargesheetPDF = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1154,7 +1150,7 @@ const Dashboard = () => {
           </div>
 
           {/* Role access banner — only for ACCOUNTS */}
-          {userRole === "ACCOUNTS" && (
+          {false && (
             <div className="role-access-banner">
               <div className="dot" />
               <span>View-only access — Accounts Section</span>
@@ -1230,14 +1226,7 @@ const Dashboard = () => {
 
             <div className="topbar-right">
               {/* Download PDF — ACCOUNTS + HOD + ADMIN */}
-              {(userRole === "ACCOUNTS" || userRole === "HOD" || userRole === "ADMIN") && (
-                <button className="btn-pdf" onClick={generateChargesheetPDF}>
-                  Download Chargesheet
-                </button>
-              )}
-
-              {(userRole === "ACCOUNTS" || userRole === "HOD" || userRole === "ADMIN") && (
-                <div className="sheet-export-control">
+              <div className="sheet-export-control">
                   <select
                     className="sheet-export-select"
                     value={selectedExamExportKey}
@@ -1254,8 +1243,7 @@ const Dashboard = () => {
                   <button className="btn-pdf" onClick={generateExamWorkbook}>
                     Download Exam Sheets
                   </button>
-                </div>
-              )}
+              </div>
 
               <div className="month-control">
                 <span className="month-control-label">Period</span>

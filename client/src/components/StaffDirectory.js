@@ -117,8 +117,7 @@ export default function StaffDirectory({ type, title, subtitle, pdfName }) {
   const [animIn, setAnimIn] = useState(false);
 
   const user = JSON.parse(sessionStorage.getItem("user") || "null");
-  const userRole = (user?.user?.role || user?.user?.type || "").toUpperCase();
-  const canManage = userRole === "ADMIN" || userRole === "HOD";
+  const canManage = Boolean(user?.user);
 
   const fetchStaff = useCallback(async () => {
     try {

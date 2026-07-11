@@ -4,25 +4,24 @@ import { useLocation, useNavigate } from "react-router-dom";
 const NAV_GROUPS = [
   {
     label: "Overview",
-    items: [{ label: "Overview", path: "/", roles: ["ADMIN", "HOD", "ACCOUNTS"] }],
+    items: [{ label: "Overview", path: "/" }],
   },
   {
     label: "Staff",
-    roles: ["ADMIN", "HOD"],
     items: [
-      { label: "Teaching", path: "/teaching", roles: ["ADMIN", "HOD"] },
-      { label: "Non-Teaching", path: "/non-teaching", roles: ["ADMIN", "HOD"] },
+      { label: "Teaching", path: "/teaching" },
+      { label: "Non-Teaching", path: "/non-teaching" },
     ],
   },
   {
     label: "Chargesheet",
     items: [
-      { label: "Create Chargesheet", path: "/chargesheet", roles: ["ADMIN", "HOD"] },
-      { label: "Add Subject", path: "/add-subject", roles: ["ADMIN", "HOD"] },
-      { label: "Add Staff", path: "/add-staff", roles: ["ADMIN", "HOD"] },
-      { label: "Task Rates", path: "/task-rates", roles: ["ADMIN", "HOD"] },
-      { label: "Create Timetable", path: "/timetable", roles: ["ADMIN", "HOD"] },
-      { label: "Accounts Section", path: "/accounts", roles: ["ACCOUNTS"] },
+      { label: "Create Chargesheet", path: "/chargesheet" },
+      { label: "Add Subject", path: "/add-subject" },
+      { label: "Add Staff", path: "/add-staff" },
+      { label: "Task Rates", path: "/task-rates" },
+      { label: "Create Timetable", path: "/timetable" },
+      { label: "Accounts Section", path: "/accounts" },
     ],
   },
 ];
