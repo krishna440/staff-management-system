@@ -11,7 +11,15 @@ const userSchema = new mongoose.Schema({
   password: String,
   role: {
     type: String,
-    enum: ["admin", "hod", "exam_committee", "Guide", "accounts"],
+    enum: [
+      "admin",
+      "hod",
+      "exam_committee",
+      "exam_co-ordinator",
+      "Exam_committee_member",
+      "Guide",
+      "accounts",
+    ],
     default: "hod",
   },
   mustChangePassword: {
