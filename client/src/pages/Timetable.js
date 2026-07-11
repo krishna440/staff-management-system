@@ -513,7 +513,6 @@ export default function Timetable() {
       head: [[
         "Date",
         "Subject",
-        "Teacher",
         "No. of\nStudents",
         "Lab Attendant\nSign",
         "Lab Assistant\nSign",
@@ -534,13 +533,12 @@ export default function Timetable() {
       },
       columnStyles: {
         0: { cellWidth: 76, halign: "center" },
-        1: { cellWidth: 230 },
-        2: { cellWidth: 120 },
-        3: { cellWidth: 72, halign: "center" },
-        4: { cellWidth: 78, halign: "center" },
-        5: { cellWidth: 78, halign: "center" },
-        6: { cellWidth: 64, halign: "center" },
-        7: { cellWidth: 64, halign: "center" },
+        1: { cellWidth: 300 },
+        2: { cellWidth: 76, halign: "center" },
+        3: { cellWidth: 90, halign: "center" },
+        4: { cellWidth: 90, halign: "center" },
+        5: { cellWidth: 72, halign: "center" },
+        6: { cellWidth: 72, halign: "center" },
       },
     });
 
@@ -864,12 +862,6 @@ export default function Timetable() {
                                 value={normalizeLabSlotValue(row.slots?.[slot.id]).rollNo}
                                 onChange={(e) => updateLabSlotCell(row.id, slot.id, "rollNo", e.target.value)}
                                 placeholder="Roll No (1-10)"
-                              />
-                              <StaffSelect
-                                value={normalizeLabSlotValue(row.slots?.[slot.id]).teacher}
-                                staff={teachingStaff}
-                                onChange={(value) => updateLabSlotCell(row.id, slot.id, "teacher", value)}
-                                placeholder="Select teacher"
                               />
                             </div>
                           </td>
@@ -1205,17 +1197,14 @@ function labDutySheetBody(rows, slots) {
       if (!subjectsByName.has(subjectKey)) {
         subjectsByName.set(subjectKey, {
           subject: value.subject,
-          teachers: new Set(),
         });
       }
-      if (value.teacher) subjectsByName.get(subjectKey).teachers.add(value.teacher);
     });
   });
 
   groupsByDate.forEach((subjectsByName, dateLabel) => {
     const entries = Array.from(subjectsByName.values()).map((entry) => ({
       subject: entry.subject,
-      teacher: Array.from(entry.teachers).join(", "),
     }));
 
     entries.forEach((entry, index) => {
@@ -1224,7 +1213,6 @@ function labDutySheetBody(rows, slots) {
           ? { content: dateLabel, rowSpan: entries.length, styles: { halign: "center", valign: "middle", fontStyle: "bold" } }
           : null,
         entry.subject,
-        entry.teacher,
         "",
         "",
         "",
@@ -1238,7 +1226,7 @@ function labDutySheetBody(rows, slots) {
     ? body
     : [[
         { content: "", styles: { halign: "center" } },
-        { content: "No lab examination entries available.", colSpan: 7, styles: { halign: "center", textColor: [100, 116, 139] } },
+        { content: "No lab examination entries available.", colSpan: 6, styles: { halign: "center", textColor: [100, 116, 139] } },
       ]];
 }
 function todayInput() { return new Date().toISOString().slice(0, 10); }

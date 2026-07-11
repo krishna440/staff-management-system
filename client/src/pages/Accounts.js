@@ -37,7 +37,6 @@ const Accounts = () => {
         ["Designation", entry.designation || ""],
         ["Exam", [entry.academicYear, entry.semester, entry.examType].filter(Boolean).join(" ")],
         ["Month", entry.month || ""],
-        ["Status", entry.status || "Pending"],
         ["Total", `Rs. ${Number(entry.total || 0).toLocaleString("en-IN")}`],
       ],
       startY: 32,
@@ -73,7 +72,6 @@ const Accounts = () => {
                   <th style={th}>Staff Name</th>
                   <th style={th}>Exam</th>
                   <th style={th}>Month</th>
-                  <th style={th}>Status</th>
                   <th style={{ ...th, textAlign: "right" }}>Total</th>
                   <th style={{ ...th, textAlign: "right" }}>Action</th>
                 </tr>
@@ -84,7 +82,6 @@ const Accounts = () => {
                     <td style={td}>{entry.staffName}</td>
                     <td style={td}>{[entry.academicYear, entry.semester, entry.examType].filter(Boolean).join(" ")}</td>
                     <td style={td}>{entry.month}</td>
-                    <td style={td}>{entry.status || "Pending"}</td>
                     <td style={{ ...td, textAlign: "right", fontWeight: 800 }}>Rs. {Number(entry.total || 0).toLocaleString("en-IN")}</td>
                     <td style={{ ...td, textAlign: "right" }}>
                       <button onClick={() => downloadPDF(entry)} style={buttonStyle}>Download PDF</button>

@@ -11,7 +11,6 @@ const ALLOWED_USERS = [
   { email: "sajankar@mc.vjti.ac.in", name: "Prof. Sonali Ajankar", role: "exam_committee" },
   { email: "bzolage@mc.vjti.ac.in", name: "Dr. Bhakti Zolage", role: "Guide"},  
   { email: "bppawar_mc24@mc.vjti.ac.in", name: "Admin", role: "admin" },
-  { email: "test@gmail.com", name: "Test Admin", role: "admin", password: "admin111", mustChangePassword: false },
   { email: "pawarbhupendra189@gmail.com", name: "Admin", role: "admin" }
 ];
 

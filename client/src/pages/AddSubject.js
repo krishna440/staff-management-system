@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { COURSE_CATALOG } from "../utils/courseCatalog";
 import { loadSubjectCatalog, saveSubjectCatalog } from "../utils/subjectCatalogStorage";
 
@@ -18,6 +18,7 @@ const AddSubject = () => {
   const [activeSem, setActiveSem] = useState("Sem I");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const formPanelRef = useRef(null);
 
   const semesters = useMemo(() => Object.keys(catalog), [catalog]);
   const subjects = useMemo(() => {
@@ -77,12 +78,16 @@ const AddSubject = () => {
 
   const editSubject = (semester, subject) => {
     setEditing({ semester, code: subject.code });
+    setActiveSem(semester);
     setForm({
       semester,
       code: subject.code,
       title: subject.title,
       kind: subject.kind === "lab" ? "lab" : "theory",
     });
+    window.setTimeout(() => {
+      formPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
   };
 
   const deleteSubject = (semester, subject) => {
@@ -112,13 +117,13 @@ const AddSubject = () => {
 
       {message && <div className="notice">{message}</div>}
 
-      <section className="panel">
+      <section className="panel" ref={formPanelRef}>
         <div className="panel-head">
           <div>
             <h2>{editing ? "Edit Subject" : "Add Subject"}</h2>
             <p>{editing ? `Editing ${editing.code}` : "Create a subject entry for chargesheets and timetables."}</p>
           </div>
-          {editing && <button className="btn secondary" onClick={resetForm}>Cancel</button>}
+          {editing && <button type="button" className="btn secondary" onClick={resetForm}>Cancel</button>}
         </div>
         <div className="form-grid">
           <Field label="Semester">
@@ -138,7 +143,7 @@ const AddSubject = () => {
               <option value="lab">Lab</option>
             </select>
           </Field>
-          <button className="btn primary" onClick={saveSubject}>{editing ? "Update" : "Add Subject"}</button>
+          <button type="button" className="btn primary" onClick={saveSubject}>{editing ? "Update" : "Add Subject"}</button>
         </div>
       </section>
 
@@ -178,8 +183,8 @@ const AddSubject = () => {
                   <td>{subject.title}</td>
                   <td><span className={`badge ${subject.kind === "lab" ? "lab" : ""}`}>{subject.kind === "lab" ? "Lab" : "Theory"}</span></td>
                   <td className="actions">
-                    <button onClick={() => editSubject(activeSem, subject)}>Edit</button>
-                    <button className="danger" onClick={() => deleteSubject(activeSem, subject)}>Delete</button>
+                    <button type="button" onClick={() => editSubject(activeSem, subject)}>Edit</button>
+                    <button type="button" className="danger" onClick={() => deleteSubject(activeSem, subject)}>Delete</button>
                   </td>
                 </tr>
               ))}

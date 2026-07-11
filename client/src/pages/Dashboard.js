@@ -273,7 +273,6 @@ const Dashboard = () => {
       relieverSessionCount: Number(entry.relieverSessionCount || 0),
       relieverAssignments: entry.relieverAssignments || [],
       dutyDates: entry.dutyDates || "",
-      status: entry.status || "Pending",
     });
     setError(null);
   };
@@ -401,13 +400,10 @@ const Dashboard = () => {
           entry.examType,
           entry.examMonth,
           entry.month,
-          entry.status,
           entryWorkLabel(entry),
         ].some((value) => String(value || "").toLowerCase().includes(normalizedEntrySearch))
       )
     : visibleEntries;
-  const submittedEntries = visibleEntries.filter((entry) => entry.status === "Submitted").length;
-  const pendingEntries = visibleEntries.filter((entry) => entry.status !== "Submitted").length;
   const teachingShare = data?.grandTotal
     ? Math.round((Number(data.teachingTotal || 0) / Number(data.grandTotal || 1)) * 100)
     : 0;
@@ -1349,8 +1345,6 @@ const Dashboard = () => {
                         <span className="hero-pill-dot" />
                         {visibleEntries.length} entries
                       </span>
-                      <span className="hero-pill">{submittedEntries} submitted</span>
-                      <span className="hero-pill">{pendingEntries} pending / review</span>
                       <span className="hero-pill">{teachingShare}% teaching share</span>
                     </div>
                   </section>
@@ -1475,7 +1469,7 @@ const Dashboard = () => {
                         className="entry-search"
                         value={entrySearch}
                         onChange={(event) => setEntrySearch(event.target.value)}
-                        placeholder="Search name, subject, duty, status..."
+                        placeholder="Search name, subject, duty..."
                         aria-label="Search dashboard entries"
                       />
                       {canManageEntries && visibleEntryIds.length > 0 && (
@@ -1505,7 +1499,7 @@ const Dashboard = () => {
 
                   {searchedVisibleEntries.length > 0 ? (
                     searchedVisibleEntries.map((cs) => {
-                      const { prog, chip, color } = statusMeta(cs.status);
+                      const { prog, color } = statusMeta(cs.status);
                       const taskCount = Number(cs.taskCount || 1);
                       return (
                         <div className="cs-row" key={cs._id}>
@@ -1533,7 +1527,6 @@ const Dashboard = () => {
                           </div>
                           <div className="cs-meta">
                             <div className="cs-amt">₹ {fmt(cs.total)}</div>
-                            <div className={`status-chip ${chip}`}>{cs.status}</div>
                           </div>
                           {canManageEntries && (
                             <div className="cs-row-actions">
@@ -1572,12 +1565,6 @@ const Dashboard = () => {
                             <div>
                               <span style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{c.staffName}</span>
                               <span style={{ fontSize: 12, color: "#64748b", marginLeft: 8 }}>₹ {fmt(c.total)}</span>
-                              <span
-                                className={`status-chip ${c.status === "Submitted" ? "chip-green" : "chip-blue"}`}
-                                style={{ marginLeft: 8 }}
-                              >
-                                {c.status}
-                              </span>
                               <div className="cs-entry-detail">{entryWorkLabel(c)}</div>
                             </div>
 
@@ -1759,8 +1746,8 @@ const Dashboard = () => {
 
                         <div className="entry-edit-section">
                           <div className="entry-edit-section-title">
-                            <span>Extra Amounts / Status</span>
-                            <small>Edit direct amounts and approval state</small>
+                            <span>Extra Amounts</span>
+                            <small>Edit direct amounts</small>
                           </div>
                           <div className="entry-edit-grid">
                             <div className="entry-edit-field">
@@ -1780,17 +1767,6 @@ const Dashboard = () => {
                                 value={editForm.invigilation}
                                 onChange={(e) => updateEditField("invigilation", e.target.value)}
                               />
-                            </div>
-                            <div className="entry-edit-field">
-                              <label>Status</label>
-                              <select
-                                value={editForm.status}
-                                onChange={(e) => updateEditField("status", e.target.value)}
-                              >
-                                <option>Pending</option>
-                                <option>In Review</option>
-                                <option>Submitted</option>
-                              </select>
                             </div>
                           </div>
                         </div>
