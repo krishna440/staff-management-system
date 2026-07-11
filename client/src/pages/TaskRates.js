@@ -299,7 +299,7 @@ const TaskRates = () => {
 
       <header className="tr-top">
         <div>
-          <h1>Task rates</h1>
+          <h1>Task Amount</h1>
           <p>
             Configure teaching, assessment, and per-session duty rates. New charge
             sheets use these values; saved rows keep their stored amounts.
