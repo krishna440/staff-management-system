@@ -52,6 +52,111 @@ const getInitialDashboardMonth = () => {
   }
 };
 
+function DashIcon({ name }) {
+  const icons = {
+    overview: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1.5" />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
+    ),
+    user: (
+      <>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </>
+    ),
+    file: (
+      <>
+        <path d="M6 2h9l5 5v15H6V2Z" />
+        <path d="M14 2v6h6M9 13h6M9 17h6" />
+      </>
+    ),
+    book: (
+      <>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 1 4 16.5v-11Z" />
+        <path d="M4 16.5A2.5 2.5 0 0 1 6.5 14H20M8 7h8M8 10h6" />
+      </>
+    ),
+    plusUser: (
+      <>
+        <path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="8.5" cy="7" r="4" />
+        <path d="M19 8v6M16 11h6" />
+      </>
+    ),
+    rates: (
+      <>
+        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="4" width="18" height="17" rx="3" />
+        <path d="M8 2v4M16 2v4M3 10h18" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 19V5M4 19h16" />
+        <rect x="7" y="11" width="3" height="5" rx="1" />
+        <rect x="12" y="7" width="3" height="9" rx="1" />
+        <rect x="17" y="3" width="3" height="13" rx="1" />
+      </>
+    ),
+    rupee: (
+      <>
+        <path d="M7 5h10M7 9h10M8 5c5 0 6 6 0 6h-1l7 8" />
+      </>
+    ),
+    clipboard: (
+      <>
+        <rect x="6" y="4" width="12" height="17" rx="2" />
+        <path d="M9 4a3 3 0 0 1 6 0M9 8h6M9 12h6M9 16h4" />
+      </>
+    ),
+    search: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m16.5 16.5 4 4" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+        <path d="m13.5 6.5 4 4" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" />
+      </>
+    ),
+    excel: (
+      <>
+        <path d="M4 4h16v16H4V4Z" />
+        <path d="M4 9h16M4 14h16M9 4v16M14 4v16" />
+        <path d="m7 17 3-3m0 3-3-3" />
+      </>
+    ),
+  };
+
+  return (
+    <svg className="dash-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {icons[name] || icons.overview}
+    </svg>
+  );
+}
+
 function assessmentAmountForEntry(entry) {
   const assessments = Number(entry?.assessments || 0);
   const amount = assessments * Number(entry?.assessmentRate || 0);
@@ -429,6 +534,7 @@ const Dashboard = () => {
         {
           label: "Dashboard",
           path: "/",
+          icon: "overview",
           dot: false,
         },
       ],
@@ -437,18 +543,18 @@ const Dashboard = () => {
       label: "Staff",
       // Accounts does NOT see staff directory
       items: [
-        { label: "Teaching",     path: "/teaching" },
-        { label: "Non-Teaching", path: "/non-teaching" },
+        { label: "Teaching",     path: "/teaching", icon: "user" },
+        { label: "Non-Teaching", path: "/non-teaching", icon: "users" },
       ],
     },
     {
       label: "Chargesheet",
       items: [
-        { label: "Create Chargesheet", path: "/chargesheet", dot: true },
-        { label: "Add Subject",        path: "/add-subject", dot: true },
-        { label: "Add Staff",          path: "/add-staff",   dot: true },
-        { label: "Task Charges",         path: "/task-rates",  dot: true },
-        { label: "Create Timetable",   path: "/timetable",   dot: true },
+        { label: "Create Chargesheet", path: "/chargesheet", icon: "file", dot: true },
+        { label: "Add Subject",        path: "/add-subject", icon: "book", dot: true },
+        { label: "Add Staff",          path: "/add-staff",   icon: "plusUser", dot: true },
+        { label: "Task Charges",       path: "/task-rates",  icon: "rates", dot: true },
+        { label: "Create Timetable",   path: "/timetable",   icon: "calendar", dot: true },
       ],
     },
   ];
@@ -1175,7 +1281,7 @@ const Dashboard = () => {
                         className={`nav-item ${isAccountsOnly ? "accounts-only" : ""}`}
                         onClick={() => item.path && navigate(item.path)}
                       >
-                        {item.dot && <span className="nav-dot" />}
+                        <span className="nav-icon"><DashIcon name={item.icon || "overview"} /></span>
                         {item.label}
                       </div>
                     );
@@ -1332,10 +1438,10 @@ const Dashboard = () => {
                     </div>
                     <div className="hero-meta">
                       <span className="hero-pill">
-                        <span className="hero-pill-dot" />
+                        <DashIcon name="clipboard" />
                         {visibleEntries.length} entries
                       </span>
-                      <span className="hero-pill">{teachingShare}% teaching share</span>
+                      <span className="hero-pill"><DashIcon name="chart" />{teachingShare}% teaching share</span>
                     </div>
                   </section>
 
@@ -1362,7 +1468,7 @@ const Dashboard = () => {
                 <div className="kpi-grid">
                   <div className="kpi-card teaching">
                     <div className="kpi-top">
-                      <div className="kpi-icon teaching">T</div>
+                      <div className="kpi-icon teaching"><DashIcon name="user" /></div>
                       <div className="kpi-badge teaching">Teaching</div>
                     </div>
                     <div>
@@ -1383,7 +1489,7 @@ const Dashboard = () => {
 
                   <div className="kpi-card nonteaching">
                     <div className="kpi-top">
-                      <div className="kpi-icon nonteaching">N</div>
+                      <div className="kpi-icon nonteaching"><DashIcon name="users" /></div>
                       <div className="kpi-badge nonteaching">Non-Teaching</div>
                     </div>
                     <div>
@@ -1404,7 +1510,7 @@ const Dashboard = () => {
 
                   <div className="kpi-card grand">
                     <div className="kpi-top">
-                      <div className="kpi-icon grand">⭐</div>
+                      <div className="kpi-icon grand"><DashIcon name="rupee" /></div>
                       <div className="kpi-badge grand">Grand Total</div>
                     </div>
                     <div>
