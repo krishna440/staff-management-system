@@ -569,7 +569,7 @@ export default function Timetable() {
       {/* TOP BAR */}
       <div className="tt-topbar">
         <div className="tt-topbar-left">
-          <div className="tt-logo">TT</div>
+          <div className="tt-logo"><Icon name="calendar" /></div>
           <div className="tt-brand">
             <div className="tt-brand-sub">VJTI - MCA Department</div>
             <div className="tt-brand-title">Examination Timetable Builder</div>
@@ -588,7 +588,7 @@ export default function Timetable() {
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ EXAM DETAILS PANEL Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="tt-card">
           <div className="tt-card-header">
-            <div className="tt-card-icon" style={{ background: "#ede9fe" }}>CFG</div>
+            <div className="tt-card-icon" style={{ background: "#ede9fe", color: "#4338ca" }}><Icon name="settings" /></div>
             <h2>Exam Configuration</h2>
             <span className="tt-card-badge" style={{ background: selectedExamType.color + "1a", color: selectedExamType.color }}>
             {selectedExamType.label} - {settings.semester}
@@ -678,7 +678,7 @@ export default function Timetable() {
         {activeTab === "theory" && (
           <section className="tt-card">
             <div className="tt-card-header">
-              <div className="tt-card-icon" style={{ background: "#dbeafe" }}>TH</div>
+              <div className="tt-card-icon" style={{ background: "#dbeafe", color: "#1e40af" }}><Icon name="book" /></div>
               <h2>Theory / MST Timetable</h2>
               <span className="tt-card-badge" style={{ background: "#dbeafe", color: "#1e40af" }}>
                 {theoryRows.length} {theoryRows.length === 1 ? "row" : "rows"}
@@ -780,7 +780,7 @@ export default function Timetable() {
         {activeTab === "lab" && (
           <section className="tt-card">
             <div className="tt-card-header">
-              <div className="tt-card-icon" style={{ background: "#dcfce7" }}>LAB</div>
+              <div className="tt-card-icon" style={{ background: "#dcfce7", color: "#166534" }}><Icon name="flask" /></div>
               <h2>Lab Timetable</h2>
               <span className="tt-card-badge" style={{ background: "#dcfce7", color: "#166534" }}>
                 {labRows.length} {labRows.length === 1 ? "slot" : "slots"}
@@ -890,7 +890,7 @@ export default function Timetable() {
         {/* Ã¢â€â‚¬Ã¢â€â‚¬ EXPORT ACTIONS Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <section className="tt-card">
           <div className="tt-card-header">
-            <div className="tt-card-icon" style={{ background: "#e0f2fe" }}>SV</div>
+            <div className="tt-card-icon" style={{ background: "#e0f2fe", color: "#0369a1" }}><Icon name="save" /></div>
             <h2>Saved Time Table</h2>
             <span className="tt-card-badge" style={{ background: "#e0f2fe", color: "#0369a1" }}>
               {savedTimetables.length} saved
@@ -916,12 +916,12 @@ export default function Timetable() {
                       </div>
                     </div>
                     <div className="tt-saved-actions">
-                      <button className="tt-mini-action" onClick={() => setPreviewTimetable(item)}>Preview</button>
-                      <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}>Edit</button>
-                      <button className="tt-mini-action" onClick={() => downloadTheoryDutySheetPdf(item)}>Duty Sheet</button>
-                      <button className="tt-mini-action" onClick={() => downloadLabDutySheetPdf(item)}>Lab Duty Sheet</button>
-                      <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}>Download</button>
-                      <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id || item._id)} title="Delete saved timetable">X</button>
+                      <button className="tt-mini-action" onClick={() => setPreviewTimetable(item)}><Icon name="eye" /> Preview</button>
+                      <button className="tt-mini-action" onClick={() => editSavedTimetable(item)}><Icon name="edit" /> Edit</button>
+                      <button className="tt-mini-action" onClick={() => downloadTheoryDutySheetPdf(item)}><Icon name="pdf" /> Duty Sheet</button>
+                      <button className="tt-mini-action" onClick={() => downloadLabDutySheetPdf(item)}><Icon name="pdf" /> Lab Duty Sheet</button>
+                      <button className="tt-mini-action" onClick={() => downloadSavedTimetable(item)}><Icon name="download" /> Download</button>
+                      <button className="tt-icon-btn" onClick={() => deleteSavedTimetable(item.id || item._id)} title="Delete saved timetable"><Icon name="trash" /></button>
                     </div>
                   </div>
                 ))}
@@ -965,13 +965,13 @@ export default function Timetable() {
 
         <section className="tt-card">
           <div className="tt-card-header">
-            <div className="tt-card-icon" style={{ background: "#fee2e2" }}>PDF</div>
+            <div className="tt-card-icon" style={{ background: "#fee2e2", color: "#b91c1c" }}><Icon name="pdf" /></div>
             <h2>Export PDF Documents</h2>
           </div>
           <div className="tt-card-body">
             <div className="tt-export-grid">
               <ExportCard
-                icon="TT"
+                icon="calendar"
                 color="#6366f1"
                 title="Theory Timetable"
                 desc="Standard examination schedule (portrait)"
@@ -979,7 +979,7 @@ export default function Timetable() {
                 onClick={() => downloadTheoryPdf()}
               />
               <ExportCard
-                icon="SD"
+                icon="clipboard"
                 color="#10b981"
                 title="Supervision Duties"
                 desc="Includes invigilator assignments (landscape)"
@@ -987,7 +987,7 @@ export default function Timetable() {
                 onClick={() => downloadSupervisionPdf()}
               />
               <ExportCard
-                icon="DS"
+                icon="pdf"
                 color="#0f766e"
                 title="Theory Duty Sheet"
                 desc="Classroom duty register with blank signature columns"
@@ -995,7 +995,7 @@ export default function Timetable() {
                 onClick={() => downloadTheoryDutySheetPdf()}
               />
               <ExportCard
-                icon="LAB"
+                icon="flask"
                 color="#f59e0b"
                 title="Lab Timetable"
                 desc="Practical exam slots (landscape)"
@@ -1003,7 +1003,7 @@ export default function Timetable() {
                 onClick={() => downloadLabPdf()}
               />
               <ExportCard
-                icon="LDS"
+                icon="pdf"
                 color="#7c3aed"
                 title="Lab Duty Sheet"
                 desc="Unique lab subjects per date"
@@ -1036,16 +1036,101 @@ function StaffSelect({ value, staff, onChange, placeholder = "-" }) {
   );
 }
 
+function Icon({ name }) {
+  const common = {
+    calendar: (
+      <>
+        <rect x="3" y="4" width="18" height="17" rx="3" />
+        <path d="M8 2v4M16 2v4M3 10h18" />
+      </>
+    ),
+    settings: (
+      <>
+        <path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Z" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 0 1-2.82 2.82l-.05-.05A1.7 1.7 0 0 0 15 19.36a1.7 1.7 0 0 0-1 .58V20a2 2 0 0 1-4 0v-.06a1.7 1.7 0 0 0-1-.58 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 0 1-2.82-2.82l.05-.05A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-.58-1H4a2 2 0 0 1 0-4h.06a1.7 1.7 0 0 0 .58-1 1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 0 1 2.82-2.82l.05.05A1.7 1.7 0 0 0 9 4.64a1.7 1.7 0 0 0 1-.58V4a2 2 0 0 1 4 0v.06a1.7 1.7 0 0 0 1 .58 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 0 1 2.82 2.82l-.05.05A1.7 1.7 0 0 0 19.36 9c.15.36.35.7.58 1H20a2 2 0 0 1 0 4h-.06a1.7 1.7 0 0 0-.54 1Z" />
+      </>
+    ),
+    book: (
+      <>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 1 4 16.5v-11Z" />
+        <path d="M4 16.5A2.5 2.5 0 0 1 6.5 14H20M8 7h8M8 10h6" />
+      </>
+    ),
+    flask: (
+      <>
+        <path d="M9 3h6M10 3v5.5L5.5 18A2 2 0 0 0 7.3 21h9.4a2 2 0 0 0 1.8-3L14 8.5V3" />
+        <path d="M8 16h8" />
+      </>
+    ),
+    save: (
+      <>
+        <path d="M5 4h12l2 2v14H5V4Z" />
+        <path d="M8 4v6h8V4M8 20v-6h8v6" />
+      </>
+    ),
+    pdf: (
+      <>
+        <path d="M6 2h9l4 4v16H6V2Z" />
+        <path d="M14 2v5h5" />
+        <path d="M8 17h8M8 14h8" />
+      </>
+    ),
+    excel: (
+      <>
+        <path d="M4 4h16v16H4V4Z" />
+        <path d="M4 9h16M4 14h16M9 4v16M14 4v16" />
+        <path d="m7 17 3-3m0 3-3-3" />
+      </>
+    ),
+    clipboard: (
+      <>
+        <rect x="6" y="4" width="12" height="17" rx="2" />
+        <path d="M9 4a3 3 0 0 1 6 0M9 8h6M9 12h6M9 16h4" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M4 20h4l11-11a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+        <path d="m13.5 6.5 4 4" />
+      </>
+    ),
+    download: (
+      <>
+        <path d="M12 3v12" />
+        <path d="m7 10 5 5 5-5" />
+        <path d="M5 21h14" />
+      </>
+    ),
+    trash: (
+      <>
+        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3" />
+      </>
+    ),
+  };
+
+  return (
+    <svg className="tt-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {common[name] || common.calendar}
+    </svg>
+  );
+}
+
 function ExportCard({ icon, color, title, desc, loading, onClick }) {
   return (
     <button className="tt-export-card" onClick={onClick} disabled={loading} style={{ borderColor: color + "33" }}>
-      <div className="tt-export-icon" style={{ background: color + "1a", color }}>{icon}</div>
+      <div className="tt-export-icon" style={{ background: color + "1a", color }}><Icon name={icon} /></div>
       <div className="tt-export-info">
         <div className="tt-export-title">{title}</div>
         <div className="tt-export-desc">{desc}</div>
       </div>
       <div className="tt-export-action" style={{ background: color }}>
-        {loading ? <div className="tt-spinner" /> : "PDF"}
+        {loading ? <div className="tt-spinner" /> : <Icon name="pdf" />}
       </div>
     </button>
   );
@@ -1303,7 +1388,18 @@ const css = `
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     font-size: 22px;
+    color: #fff;
     backdrop-filter: blur(8px);
+  }
+  .tt-svg-icon {
+    width: 1em;
+    height: 1em;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
   .tt-brand { color: #fff; }
   .tt-brand-sub { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.65); letter-spacing: .5px; }
@@ -1673,6 +1769,9 @@ const css = `
     font-size: 13px; font-weight: 700;
     transition: all .15s;
     font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .tt-icon-btn:hover:not(:disabled) {
     background: #fee2e2;
@@ -1683,8 +1782,12 @@ const css = `
     cursor: not-allowed;
   }
   .tt-mini-action {
-    display: block;
-    width: 78px;
+    display: inline-flex;
+    width: auto;
+    min-width: 86px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     border: none;
     border-radius: 8px;
     background: #eef2ff;
@@ -1695,6 +1798,12 @@ const css = `
     padding: 7px 8px;
     margin-bottom: 8px;
     font-family: inherit;
+    line-height: 1.2;
+  }
+  .tt-mini-action .tt-svg-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
   .tt-mini-action:hover {
     background: #e0e7ff;
@@ -1832,6 +1941,10 @@ const css = `
     color: #fff;
     font-size: 18px; font-weight: 700;
     flex-shrink: 0;
+  }
+  .tt-export-action .tt-svg-icon {
+    width: 18px;
+    height: 18px;
   }
 
   /* Ã¢â€â‚¬Ã¢â€â‚¬ SPINNER Ã¢â€â‚¬Ã¢â€â‚¬ */

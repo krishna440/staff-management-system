@@ -810,8 +810,14 @@ const Dashboard = () => {
           font-family: 'DM Sans', sans-serif; transition: background 0.15s, transform 0.12s, box-shadow 0.12s;
           white-space: nowrap;
           box-shadow: 0 10px 20px rgba(15,23,42,0.12);
+          display: inline-flex; align-items: center; gap: 7px;
         }
         .btn-pdf:hover { background: #111827; transform: translateY(-1px); }
+        .btn-icon {
+          width: 15px; height: 15px; display: block;
+          fill: none; stroke: currentColor; stroke-width: 2;
+          stroke-linecap: round; stroke-linejoin: round;
+        }
 
         .month-control {
           display: flex; align-items: center; gap: 8px;
@@ -1232,6 +1238,11 @@ const Dashboard = () => {
                     ))}
                   </select>
                   <button className="btn-pdf" onClick={generateExamWorkbook}>
+                    <svg className="btn-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 4h16v16H4V4Z" />
+                      <path d="M4 9h16M4 14h16M9 4v16M14 4v16" />
+                      <path d="m7 17 3-3m0 3-3-3" />
+                    </svg>
                     Download Exam Sheets
                   </button>
               </div>
