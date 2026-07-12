@@ -742,8 +742,13 @@ const Dashboard = () => {
         .dash-shell.sidebar-collapsed .sidebar { width: 72px; min-width: 72px; }
         .dash-shell.sidebar-collapsed .logo-text,
         .dash-shell.sidebar-collapsed .nav-group-label,
-        .dash-shell.sidebar-collapsed .nav-item span:not(.nav-dot),
+        .dash-shell.sidebar-collapsed .nav-label,
         .dash-shell.sidebar-collapsed .sidebar-user-info { display: none; }
+        .dash-icon {
+          width: 1em; height: 1em; display: block;
+          fill: none; stroke: currentColor; stroke-width: 2;
+          stroke-linecap: round; stroke-linejoin: round;
+        }
 
         /* SIDEBAR */
         .sidebar {
@@ -801,6 +806,14 @@ const Dashboard = () => {
         }
         .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
         .nav-item.active { background: rgba(59,130,246,0.2); color: #bfdbfe; font-weight: 700; }
+        .nav-icon {
+          width: 22px; height: 22px; border-radius: 7px;
+          display: inline-flex; align-items: center; justify-content: center;
+          color: rgba(219,234,254,0.78); flex-shrink: 0;
+        }
+        .nav-icon .dash-icon { width: 16px; height: 16px; }
+        .nav-item:hover .nav-icon,
+        .nav-item.active .nav-icon { background: rgba(59,130,246,0.16); color: #bfdbfe; }
         .nav-dot {
           width: 6px; height: 6px; border-radius: 50%;
           background: currentColor; flex-shrink: 0; opacity: 0.7;
@@ -993,9 +1006,10 @@ const Dashboard = () => {
           padding: 8px 11px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0;
           color: #334155; font-size: 12px; font-weight: 800;
         }
+        .hero-pill .dash-icon { width: 15px; height: 15px; color: #2563eb; }
         .hero-pill-dot { width: 7px; height: 7px; border-radius: 999px; background: #10b981; }
         .summary-panel {
-          background: #0f172a; color: #fff; border-radius: 12px; padding: 20px;
+          background: linear-gradient(145deg, #0f172a 0%, #172554 100%); color: #fff; border-radius: 10px; padding: 20px;
           box-shadow: 0 16px 34px rgba(15,23,42,0.16);
           display: flex; flex-direction: column; justify-content: space-between; gap: 18px;
         }
@@ -1022,7 +1036,7 @@ const Dashboard = () => {
         /* KPI Cards */
         .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
         .kpi-card {
-          background: #fff; border: 1px solid #dbe3ef; border-radius: 10px;
+          background: #fff; border: 1px solid #dbe3ef; border-radius: 8px;
           padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;
           position: relative; overflow: hidden;
           opacity: 0; transform: translateY(16px);
@@ -1038,10 +1052,11 @@ const Dashboard = () => {
         .kpi-card.nonteaching::after { background: #10b981; }
         .kpi-card.grand::after       { background: #f59e0b; }
         .kpi-top { display: flex; align-items: center; justify-content: space-between; }
-        .kpi-icon { width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; }
-        .kpi-icon.teaching    { background: #eef2ff; }
-        .kpi-icon.nonteaching { background: #ecfdf5; }
-        .kpi-icon.grand       { background: #fffbeb; }
+        .kpi-icon { width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .kpi-icon .dash-icon { width: 20px; height: 20px; }
+        .kpi-icon.teaching    { background: #eef2ff; color: #4338ca; }
+        .kpi-icon.nonteaching { background: #ecfdf5; color: #047857; }
+        .kpi-icon.grand       { background: #fffbeb; color: #b45309; }
         .kpi-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
         .kpi-badge.teaching    { background: #eef2ff; color: #4338ca; }
         .kpi-badge.nonteaching { background: #ecfdf5; color: #065f46; }
@@ -1056,20 +1071,28 @@ const Dashboard = () => {
 
         /* Stats band */
         .stats-band {
-          background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
-          display: flex; overflow: hidden;
+          background: transparent; border: 0; border-radius: 0;
+          display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; overflow: visible;
           opacity: 0; animation: fadeUp 0.45s ease 0.26s forwards;
-          box-shadow: 0 10px 24px rgba(15,23,42,0.045);
+          box-shadow: none;
         }
-        .stat-block { flex: 1; padding: 16px 20px; border-right: 1px solid #e2e8f0; }
-        .stat-block:last-child { border-right: none; }
+        .stat-block {
+          flex: 1; padding: 16px 18px; border: 1px solid #e2e8f0; border-radius: 8px;
+          background: #fff; box-shadow: 0 8px 20px rgba(15,23,42,0.04);
+        }
         .stat-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #94a3b8; margin-bottom: 5px; }
         .stat-val { font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }
         .stat-sub { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .section-title-icon {
+          width: 28px; height: 28px; border-radius: 8px;
+          display: inline-flex; align-items: center; justify-content: center;
+          background: #eef2ff; color: #4338ca;
+        }
+        .section-title-icon .dash-icon { width: 16px; height: 16px; }
 
         /* Chargesheet card */
         .cs-card {
-          background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;
+          background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;
           opacity: 0; animation: fadeUp 0.45s ease 0.34s forwards;
           box-shadow: 0 12px 30px rgba(15,23,42,0.055);
         }
@@ -1077,7 +1100,7 @@ const Dashboard = () => {
           padding: 15px 20px; border-bottom: 1px solid #e2e8f0;
           display: flex; align-items: center; justify-content: space-between;
           gap: 14px; flex-wrap: wrap;
-          background: #f8fafc;
+          background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
         }
         .cs-card-title { font-size: 14px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
         .cs-card-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -1128,7 +1151,9 @@ const Dashboard = () => {
           border: none; border-radius: 8px; padding: 6px 10px;
           font-size: 11px; font-weight: 700; cursor: pointer;
           font-family: 'DM Sans', sans-serif; transition: transform 0.12s, opacity 0.12s;
+          display: inline-flex; align-items: center; gap: 5px;
         }
+        .cs-action-btn .dash-icon { width: 13px; height: 13px; }
         .cs-action-btn:hover { transform: translateY(-1px); }
         .cs-action-edit { background: #eef2ff; color: #3730a3; }
         .cs-action-delete { background: #fef2f2; color: #b91c1c; }
@@ -1282,7 +1307,7 @@ const Dashboard = () => {
                         onClick={() => item.path && navigate(item.path)}
                       >
                         <span className="nav-icon"><DashIcon name={item.icon || "overview"} /></span>
-                        {item.label}
+                        <span className="nav-label">{item.label}</span>
                       </div>
                     );
                   })}
@@ -1556,7 +1581,7 @@ const Dashboard = () => {
                 <div className="cs-card">
                   <div className="cs-card-head">
                     <div className="cs-card-title">
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#6366f1", display: "inline-block" }} />
+                      <span className="section-title-icon"><DashIcon name="file" /></span>
                       MCA Department — Exam Sheet Status
                     </div>
                     <div className="cs-card-tools">
@@ -1627,10 +1652,10 @@ const Dashboard = () => {
                           {canManageEntries && (
                             <div className="cs-row-actions">
                               <button type="button" className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(cs)}>
-                                Edit
+                                <DashIcon name="edit" /> Edit
                               </button>
                               <button type="button" className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(cs)}>
-                                Delete
+                                <DashIcon name="trash" /> Delete
                               </button>
                             </div>
                           )}
@@ -1667,10 +1692,10 @@ const Dashboard = () => {
                             {canManageEntries && (
                               <div className="cs-row-actions">
                                 <button type="button" className="cs-action-btn cs-action-edit" onClick={() => startEditEntry(c)}>
-                                  Edit
+                                  <DashIcon name="edit" /> Edit
                                 </button>
                                 <button type="button" className="cs-action-btn cs-action-delete" onClick={() => deleteEntry(c)}>
-                                  Delete
+                                  <DashIcon name="trash" /> Delete
                                 </button>
                               </div>
                             )}
