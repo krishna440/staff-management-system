@@ -513,6 +513,7 @@ export default function Timetable() {
       head: [[
         "Date",
         "Subject",
+        "Teacher\nName",
         "No. of\nStudents",
         "Lab Attendant\nSign",
         "Lab Assistant\nSign",
@@ -533,12 +534,13 @@ export default function Timetable() {
       },
       columnStyles: {
         0: { cellWidth: 76, halign: "center" },
-        1: { cellWidth: 300 },
-        2: { cellWidth: 76, halign: "center" },
-        3: { cellWidth: 90, halign: "center" },
-        4: { cellWidth: 90, halign: "center" },
-        5: { cellWidth: 72, halign: "center" },
-        6: { cellWidth: 72, halign: "center" },
+        1: { cellWidth: 230 },
+        2: { cellWidth: 110 },
+        3: { cellWidth: 72, halign: "center" },
+        4: { cellWidth: 78, halign: "center" },
+        5: { cellWidth: 78, halign: "center" },
+        6: { cellWidth: 64, halign: "center" },
+        7: { cellWidth: 64, halign: "center" },
       },
     });
 
@@ -1303,6 +1305,7 @@ function labDutySheetBody(rows, slots) {
         "",
         "",
         "",
+        "",
       ].filter((cell) => cell !== null));
     });
   });
@@ -1311,7 +1314,7 @@ function labDutySheetBody(rows, slots) {
     ? body
     : [[
         { content: "", styles: { halign: "center" } },
-        { content: "No lab examination entries available.", colSpan: 6, styles: { halign: "center", textColor: [100, 116, 139] } },
+        { content: "No lab examination entries available.", colSpan: 7, styles: { halign: "center", textColor: [100, 116, 139] } },
       ]];
 }
 function todayInput() { return new Date().toISOString().slice(0, 10); }
